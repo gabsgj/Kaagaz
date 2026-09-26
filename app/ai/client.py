@@ -6,7 +6,7 @@ from datetime import datetime
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 NVIDIA_NIM_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-OPENROUTER_MODEL = "mistralai/mistral-7b-instruct"
+OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct"
 NVIDIA_NIM_MODEL = "meta/llama-3.1-8b-instruct"
 TIMEOUT = 8  # seconds
 

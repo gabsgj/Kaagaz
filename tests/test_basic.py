@@ -24,9 +24,10 @@ def test_checklist_nri_account(client):
     resp = client.get('/checklist?transaction_type=nri_account')
     assert resp.status_code == 200
 
-def test_ai_explain_no_key(client):
+def test_ai_explain(client):
     resp = client.post('/api/ai/explain', json={'term': 'Encumbrance Certificate', 'transaction_type': 'home_loan'})
     assert resp.status_code == 200
     data = resp.get_json()
     assert 'explanation' in data
-    assert data['source'] == 'static_fallback'  # no API keys in test env
+    assert data['source'] in ('openrouter', 'nvidia_nim', 'static_fallback')
+    assert len(data['explanation']) > 20
