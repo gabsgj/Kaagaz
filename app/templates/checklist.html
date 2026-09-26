@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Kaagaz — {{ transaction_label }}{% if state_label %} · {{ state_label }}{% endif %}{% endblock %}
+
+{% block content %}
+<section class="checklist-section">
+
+  <!-- ─── Page header ─── -->
+  <div class="checklist-header">
+    <a href="/" class="back-link no-print">← Change transaction</a>
+    <h1 class="checklist-header__title">{{ transaction_label }}</h1>
+    {% if state_label %}
+      <span class="checklist-header__state-badge">{{ state_label }}</span>
+    {% endif %}
+  </div>
+
+  <!-- ─── Flip-board progress counter ─── -->
+  <div class="progress-board" id="progressBoard">
+    <div class="progress-board__label">Documents Ready</div>
+    <div class="progress-board__counter">
+      <span class="flip-number" id="doneCount" data-value="0">0</span>
+      <span class="progress-board__sep">of</span>
+      <span class="flip-number" id="totalCount" data-value="{{ total }}">{{ total }}</span>
+    </div>
+    <div class="progress-board__pct" id="progressPct">0%</div>
+  </div>
+
+  <!-- ─── Actions bar ─── -->
+  <div class="checklist-actions no-print">
+    <button class="btn btn--outline btn--sm" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px">
+        <rect x="2" y="5" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.4" fill="none"/>
+        <path d="M4 5V2h8v3" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        <rect x="4" y="9" width="8" height="4" rx="0.5" fill="currentColor" opacity="0.25"/>
+        <circle cx="12" cy="7.5" r="0.8" fill="currentColor"/>
+      </svg>
+      Print / Save PDF
+    </button>
+  </div>
+
+  <!-- ─── Checklist items ─── -->
+  <div class="checklist-list" id="checklistList">
+    {% for item in items %}
+    <div
+      class="checklist-item"
+      data-item-id="{{ item.id }}"
+      data-source="{{ item.regulatory_source }}"
+    >
+      <!-- Top row: status badge + doc name -->
+      <div class="checklist-item__top">
+        <div class="flip-status" data-item-id="{{ item.id }}" data-state="pending">PENDING</div>
+        <div class="checklist-item__source-dot source-dot--{{ item.regulatory_source }}"
+             title="{{ item.regulatory_source | replace('_', ' ') | title }}"></div>
+        <h3 class="checklist-item__name">{{ item.document_name }}</h3>
+      </div>
+
+      <!-- Dependency notice -->
+      {% if item.depends_on %}
+        <div class="checklist-item__depends">
+          <span class="depends-icon">↳</span>
+          Requires: <strong>{{ item.depends_on }}</strong>
+        </div>
+      {% endif %}
+
+      <!-- Plain explanation -->
+      <p class="checklist-item__explanation">{{ item.plain_explanation }}</p>
+
+      <!-- Collapsed detail section -->
+      <div class="item-details" id="details-{{ item.id }}">
+        <dl class="item-details__grid">
+          <dt>Where to obtain</dt>
+          <dd>{{ item.where_to_obtain }}</dd>
+          <dt>Approx. cost</dt>
+          <dd>
+            {% if item.approx_cost_min is not none and item.approx_cost_max is not none %}
+              ₹{{ item.approx_cost_min | int | format_inr }} – ₹{{ item.approx_cost_max | int | format_inr }}
+            {% elif item.approx_cost_min is not none %}
+              ₹{{ item.approx_cost_min | int | format_inr }}
+            {% else %}
+              Varies / Free
+            {% endif %}
+          </dd>
+          <dt>Approx. time</dt>
+          <dd>{{ item.approx_time_days }} day{{ 's' if item.approx_time_days != 1 else '' }}</dd>
+          <dt>Source</dt>
+          <dd class="source-note">{{ item.source_note }}</dd>
+        </dl>
+      </div>
+
+      <!-- Action buttons row -->
+      <div class="checklist-item__actions no-print">
+        <button
+          class="btn-link explain-btn"
+          data-term="{{ item.document_name }}"
+          data-tx-type="{{ transaction_type }}"
+          data-item-id="{{ item.id }}"
+        >What is this?</button>
+
+        <button
+          class="details-toggle btn--text-sm"
+          data-target="details-{{ item.id }}"
+          aria-expanded="false"
+        >Show details ▾</button>
+
+        <button
+          class="btn btn--done mark-done-btn"
+          data-item-id="{{ item.id }}"
+        >Mark as done</button>
+      </div>
+
+      <!-- AI explainer box -->
+      <div class="ai-explainer" id="explainer-{{ item.id }}">
+        <div class="ai-explainer__content">Consulting the Kaagaz knowledge base&hellip;</div>
+        <div class="ai-source-note" id="explainer-note-{{ item.id }}"></div>
+      </div>
+
+    </div><!-- /checklist-item -->
+    {% endfor %}
+  </div>
+
+  {% if not items %}
+    <div class="empty-state">
+      <p>No checklist items found for this transaction and state combination.</p>
+      <a href="/" class="btn btn--primary">← Back to picker</a>
+    </div>
+  {% endif %}
+
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── Utilities ─── */
+  function qs(sel, ctx)  { return (ctx || document).querySelector(sel); }
+  function qsa(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
+
+  /* ─── FlipNumber: forward-declared here for inline use (flipboard.js also defines it globally) ─── */
+  // flipboard.js is loaded via <script defer> in base.html, so it is guaranteed
+  // to be available by DOMContentLoaded. We'll call window.KaagazFlip below.
+
+  /* ─── State management ─── */
+  var itemStates = {}; // item-id → 'pending' | 'in_progress' | 'done'
+  qsa('.checklist-item').forEach(function (item) {
+    itemStates[item.dataset.itemId] = 'pending';
+  });
+
+  function countDone() {
+    return Object.values(itemStates).filter(function (s) { return s === 'done'; }).length;
+  }
+
+  function updateProgressBoard() {
+    var done  = countDone();
+    var total = parseInt(qs('#totalCount').dataset.value, 10);
+    var pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    if (window.KaagazFlip) {
+      window.KaagazFlip.animateNumber('doneCount', done);
+    } else {
+      qs('#doneCount').textContent = done;
+    }
+    qs('#progressPct').textContent = pct + '%';
+  }
+
+  /* ─── Mark-done buttons ─── */
+  var STATE_CYCLE = ['pending', 'in_progress', 'done'];
+
+  qsa('.mark-done-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.itemId;
+      var cur = itemStates[id] || 'pending';
+      var next = STATE_CYCLE[(STATE_CYCLE.indexOf(cur) + 1) % STATE_CYCLE.length];
+      itemStates[id] = next;
+
+      // Animate flip-status badge
+      var badge = qs('.flip-status[data-item-id="' + id + '"]');
+      if (badge && window.KaagazFlip) {
+        window.KaagazFlip.transitionStatus(badge, next);
+      } else if (badge) {
+        badge.dataset.state = next;
+        badge.textContent = { pending:'PENDING', in_progress:'IN PROGRESS', done:'DONE' }[next];
+      }
+
+      // Strikethrough item name if done
+      var nameEl = qs('[data-item-id="' + id + '"] .checklist-item__name');
+      if (nameEl) {
+        nameEl.style.textDecoration = next === 'done' ? 'line-through' : '';
+        nameEl.style.opacity        = next === 'done' ? '0.55' : '';
+      }
+
+      // Update button label
+      btn.textContent = { pending: 'Mark as done', in_progress: 'Mark as done', done: 'Undo' }[next];
+
+      updateProgressBoard();
+    });
+  });
+
+  /* ─── Details toggle ─── */
+  qsa('.details-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var targetId = btn.dataset.target;
+      var panel    = document.getElementById(targetId);
+      if (!panel) return;
+      var expanded = panel.classList.toggle('expanded');
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      btn.textContent = expanded ? 'Hide details ▴' : 'Show details ▾';
+    });
+  });
+
+  /* ─── AI Explainer ─── */
+  qsa('.explain-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id    = btn.dataset.itemId;
+      var term  = btn.dataset.term;
+      var txType= btn.dataset.txType;
+      var box   = document.getElementById('explainer-' + id);
+      var noteEl= document.getElementById('explainer-note-' + id);
+      var contentEl = qs('.ai-explainer__content', box);
+
+      if (!box) return;
+
+      // Toggle: if already visible, hide it
+      if (box.classList.contains('visible')) {
+        box.classList.remove('visible');
+        btn.textContent = 'What is this?';
+        return;
+      }
+
+      // Show loading state
+      box.classList.remove('loaded');
+      box.classList.add('visible', 'loading');
+      contentEl.textContent = 'Consulting the Kaagaz knowledge base\u2026';
+      noteEl.textContent = '';
+      btn.textContent = 'Hide explanation';
+
+      fetch('/api/ai/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term: term, transaction_type: txType })
+      })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        box.classList.remove('loading');
+        box.classList.add('loaded');
+        contentEl.textContent = data.explanation || 'No explanation available.';
+        if (data.source === 'static_fallback') {
+          noteEl.textContent = 'Live AI explanation temporarily unavailable — showing database entry.';
+        } else {
+          noteEl.textContent = '';
+        }
+      })
+      .catch(function () {
+        box.classList.remove('loading');
+        contentEl.textContent = 'Unable to load explanation. Please try again.';
+        noteEl.textContent = '';
+      });
+    });
+  });
+
+  /* ─── Init progress board total ─── */
+  (function initTotal() {
+    var totalEl = qs('#totalCount');
+    if (totalEl && window.KaagazFlip) {
+      window.KaagazFlip.animateNumber('totalCount', parseInt(totalEl.dataset.value, 10));
+    }
+  }());
+
+}());
+</script>
+{% endblock %}
