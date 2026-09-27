@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "_icons.html" as ico %}
+{% import "_bubble.html" as bub %}
 {% block title %}Kaagaz — how it works{% endblock %}
 
 {% block content %}
@@ -14,6 +15,15 @@
       web at the moment you ask, and files what it finds.
     </p>
   </div>
+
+  <div class="bub-stage bub-stage--row">
+    {{ bub.bubble_present(140, 'bub--float') }}
+    {{ bub.bubble_stack(140) }}
+    {{ bub.bubble_think(140, 'bub--float') }}
+  </div>
+  <p class="bub-caption" style="margin-bottom:var(--s4)">
+    You ask. It reads the sources. It tells you what it could not confirm.
+  </p>
 
   <!-- ══════════ THE PIPELINE ══════════ -->
   <div class="rule-head">

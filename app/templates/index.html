@@ -1,209 +1,460 @@
 {% extends "base.html" %}
 {% import "_icons.html" as ico %}
+{% import "_bubble.html" as bub %}
 {% block title %}Kaagaz — ask about any banking document requirement{% endblock %}
+{% block main_class %}site-main--flush{% endblock %}
 
 {% block content %}
-<div class="shell shell--narrow">
+<div class="landing">
 
   <!-- ═══════════ HERO ═══════════ -->
-  <div class="ask-hero">
-    <p class="eyebrow">Research agent · not a lookup table</p>
-    <h1 class="display">What paperwork are you up against?</h1>
-    <p class="lede ask-hero__lede">
-      Name the transaction, the bank and the state. Kaagaz searches the live web,
-      reads the sources, and hands back one ordered checklist — every document,
-      what it costs, how long it takes, and who actually regulates it.
-    </p>
-  </div>
+  <section class="landing__section hero" aria-labelledby="hero-heading">
+    <div class="shell shell--wide hero__grid">
+      <div class="hero__copy">
+        <p class="eyebrow">Research agent · not a lookup table</p>
+        <h1 class="display" id="hero-heading">Bank paperwork, researched live and cited line by line.</h1>
+        <p class="lede">
+          Name the transaction, the bank, the applicant, and the state. Kaagaz
+          normalizes the question, checks its research record, searches the live
+          web when needed, and returns one ordered checklist with costs,
+          timelines, regulator attribution, and the sources it actually read.
+        </p>
+        <div class="hero__actions">
+          <a class="btn btn--primary btn--lg" href="#ask">
+            {{ ico.icon('search', 20) }}
+            <span>Start a research request</span>
+          </a>
+          <a class="btn btn--quiet btn--lg" href="#architecture">
+            {{ ico.icon('layers', 20) }}
+            <span>See the architecture</span>
+          </a>
+        </div>
+        <ul class="hero__meta" aria-label="Why Kaagaz is different">
+          <li>{{ ico.icon('check', 16) }} {{ stats.entries }} pre-researched answers</li>
+          <li>{{ ico.icon('link', 16) }} {{ stats.distinct_sources }} distinct cited sources</li>
+          <li>{{ ico.icon('book', 16) }} RBI, registrar, and bank rules kept separate</li>
+        </ul>
 
-  <!-- ═══════════ LEDGER ═══════════ -->
-  <ol class="ledger">
-    <li class="ledger__step">
-      <span class="ledger__num">1</span>
-      <span class="ledger__label">Describe the transaction<br />any bank, any state</span>
-    </li>
-    <li class="ledger__step">
-      <span class="ledger__num">2</span>
-      <span class="ledger__label">We search, read and cite<br />the primary sources</span>
-    </li>
-    <li class="ledger__step">
-      <span class="ledger__num">3</span>
-      <span class="ledger__label">Tick off each document<br />as you collect it</span>
-    </li>
-  </ol>
+        <div class="sheet bub-panel">
+          <div class="bub-stage bub-stage--row">
+            {{ bub.bubble_present(150, 'bub--float') }}
+            {{ bub.bubble_stack(150) }}
+            {{ bub.bubble_done(150, 'bub--float') }}
+          </div>
+          <p class="bub-caption">
+            You ask once. You tick everything off. You keep the receipts.
+          </p>
+        </div>
+      </div>
 
-  {% if error %}
-    <div class="notice notice--error" role="alert" style="margin-bottom:24px">
-      {{ ico.icon('alert', 20, cls='notice__icon') }}
-      <span>{{ error }}</span>
+      <aside class="sheet preview" aria-label="Illustrated layout of a finished answer">
+        <div class="preview__head">
+          <span class="preview__title">What a finished answer contains</span>
+          <span class="meta-sm">Illustrated layout</span>
+        </div>
+        <div class="preview__rows">
+          <div class="preview__row">
+            <span class="preview__num" aria-hidden="true">01</span>
+            <span>PAN card · who needs it, where it is issued, and what it costs</span>
+            <span class="preview__cite">Income Tax</span>
+          </div>
+          <div class="preview__row">
+            <span class="preview__num" aria-hidden="true">02</span>
+            <span>Salary slips and ITR acknowledgement as two separate proofs</span>
+            <span class="preview__cite">Bank policy</span>
+          </div>
+          <div class="preview__row">
+            <span class="preview__num" aria-hidden="true">03</span>
+            <span>Stamp duty and registration separated from RBI requirements</span>
+            <span class="preview__cite">State registrar</span>
+          </div>
+        </div>
+        <div class="preview__sources" aria-label="Example source kinds">
+          <span class="preview__cite">Bank product page</span>
+          <span class="preview__cite">RBI direction</span>
+          <span class="preview__cite">State circular</span>
+        </div>
+        <div class="preview__foot">
+          <span class="meta-sm">Ordered steps · costs · timelines · audit record</span>
+          {{ ico.icon('seal', 24) }}
+        </div>
+      </aside>
     </div>
-  {% endif %}
+  </section>
+
+  <!-- ═══════════ TRUST STRIP ═══════════ -->
+  <section class="landing__section landing__section--paper-deep" aria-label="What Kaagaz guarantees">
+    <div class="shell shell--wide">
+      <ul class="trust-grid">
+        <li>
+          {{ ico.icon('globe', 24) }}
+          <h3>Live research, not a fixed menu</h3>
+          <p>Unknown banks, products, and spellings pass through. Anything outside the cache is researched, then filed.</p>
+        </li>
+        <li>
+          {{ ico.icon('link', 24) }}
+          <h3>Sources you can open</h3>
+          <p>No anonymous “generally required” list. Every checklist keeps the exact URLs behind its claims.</p>
+        </li>
+        <li>
+          {{ ico.icon('registry', 24) }}
+          <h3>Regulator-aware answers</h3>
+          <p>RBI rules, state stamp acts, registrar procedure, and bank policy are labeled separately—and never mixed.</p>
+        </li>
+        <li>
+          {{ ico.icon('clock', 24) }}
+          <h3>Freshness with a date</h3>
+          <p>Repeat questions answer instantly from cache, show when they were researched, and refresh through live search.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
 
   <!-- ═══════════ ASK FORM ═══════════ -->
-  <form id="askForm" class="ask-card sheet" novalidate>
-
-    <div class="ask-grid">
-
-      <!-- Transaction -->
-      <div class="field ask-grid__full">
-        <label class="field__label" for="transaction_type">
-          What are you trying to do?
-        </label>
-        <input
-          class="input"
-          type="text"
-          id="transaction_type"
-          name="transaction_type"
-          list="category-list"
-          autocomplete="off"
-          spellcheck="false"
-          required
-          maxlength="120"
-          placeholder="Home loan, loan against FD, property registration…"
-          aria-describedby="tx-hint" />
-        <p class="field__hint" id="tx-hint">
-          Anything at all. If it is not on this list we will still research it.
-        </p>
-        <datalist id="category-list">
-          {% for value, label in popular_categories %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </datalist>
+  <section class="landing__section" id="ask" aria-labelledby="ask-heading">
+    <div class="shell shell--wide">
+      <div class="rule-head">
+        <h2 class="h2" id="ask-heading">Ask in your own words</h2>
+        <span class="meta-sm">Cold research takes about 15–40 seconds</span>
       </div>
 
-      <!-- Bank -->
-      <div class="field">
-        <label class="field__label" for="bank">Bank or lender</label>
-        <input
-          class="input"
-          type="text"
-          id="bank"
-          name="bank"
-          list="bank-list"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="120"
-          placeholder="Leave blank for any bank" />
-        <datalist id="bank-list">
-          {% for name in bank_names %}
-            <option value="{{ name }}"></option>
-          {% endfor %}
-        </datalist>
-        <p class="field__hint">Optional. Weights the search towards that bank's own pages.</p>
-      </div>
-
-      <!-- State -->
-      <div class="field">
-        <label class="field__label" for="state">State or union territory</label>
-        <input
-          class="input"
-          type="text"
-          id="state"
-          name="state"
-          list="state-list"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="80"
-          placeholder="Leave blank if not state-specific" />
-        <datalist id="state-list">
-          {% for name in state_names %}
-            <option value="{{ name }}"></option>
-          {% endfor %}
-        </datalist>
-        <p class="field__hint">Optional. Only matters where stamp duty or registration fees apply.</p>
-      </div>
-
-      <!-- Residency -->
-      <fieldset class="field ask-grid__full" style="border:0;padding:0;margin:0">
-        <legend class="field__label" style="padding:0;margin-bottom:8px">
-          Who is the applicant?
-        </legend>
-        <div class="segmented" role="radiogroup" aria-label="Applicant residency status">
-          {% for value, item in residency_options %}
-            <label class="segmented__option">
-              <input class="segmented__input" type="radio" name="residency"
-                     value="{{ value }}" {% if loop.first %}checked{% endif %} />
-              <span class="segmented__face">
-                <span class="segmented__title">{{ item.label }}</span>
-                <span class="segmented__blurb">{{ item.blurb }}</span>
-              </span>
-            </label>
-          {% endfor %}
+      {% if error %}
+        <div class="notice notice--error" role="alert" style="margin-bottom:24px">
+          {{ ico.icon('alert', 20, cls='notice__icon') }}
+          <span>{{ error }}</span>
         </div>
-      </fieldset>
+      {% endif %}
 
-    </div>
+      <ol class="ledger" aria-label="How Kaagaz works">
+        <li class="ledger__step">
+          <span class="ledger__num" aria-hidden="true">1</span>
+          <span class="ledger__label">Describe the transaction<br />any bank, any state</span>
+        </li>
+        <li class="ledger__step">
+          <span class="ledger__num" aria-hidden="true">2</span>
+          <span class="ledger__label">We search, read and cite<br />the primary sources</span>
+        </li>
+        <li class="ledger__step">
+          <span class="ledger__num" aria-hidden="true">3</span>
+          <span class="ledger__label">Tick off each document<br />as you collect it</span>
+        </li>
+      </ol>
 
-    <div class="ask-actions">
-      <button type="submit" class="btn btn--primary btn--lg" id="askBtn">
-        {{ ico.icon('search', 20) }}
-        <span>Research it</span>
-      </button>
-      <p class="ask-footnote">
-        {{ ico.icon('info', 16, cls='ask-footnote__icon') }}
-        <span>
-          No account, no upload, nothing stored about you. A cold research takes
-          15–40 seconds; repeat questions are answered from cache instantly.
-        </span>
-      </p>
-    </div>
+      <div class="ask-layout">
+        <form id="askForm" class="ask-card sheet" action="/checklist" method="get">
+          <div class="ask-grid">
+            <div class="field ask-grid__full">
+              <label class="field__label" for="transaction_type">
+                What are you trying to do?
+              </label>
+              <input
+                class="input"
+                type="text"
+                id="transaction_type"
+                name="transaction_type"
+                list="category-list"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                maxlength="120"
+                placeholder="Home loan, loan against FD, property registration…"
+                aria-describedby="tx-hint" />
+              <p class="field__hint" id="tx-hint">
+                Anything at all. If it is not on this list we will still research it.
+              </p>
+              <datalist id="category-list">
+                {% for value, label in popular_categories %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </datalist>
+            </div>
 
-    <div class="ask-card__pin" aria-hidden="true">
-      {{ ico.paperclip(32) }}
+            <div class="field">
+              <label class="field__label" for="bank">Bank or lender</label>
+              <input
+                class="input"
+                type="text"
+                id="bank"
+                name="bank"
+                list="bank-list"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="120"
+                placeholder="Leave blank for any bank" />
+              <datalist id="bank-list">
+                {% for name in bank_names %}
+                  <option value="{{ name }}"></option>
+                {% endfor %}
+              </datalist>
+              <p class="field__hint">Optional. Weights the search towards that bank's own pages.</p>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="state">State or union territory</label>
+              <input
+                class="input"
+                type="text"
+                id="state"
+                name="state"
+                list="state-list"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="80"
+                placeholder="Leave blank if not state-specific" />
+              <datalist id="state-list">
+                {% for name in state_names %}
+                  <option value="{{ name }}"></option>
+                {% endfor %}
+              </datalist>
+              <p class="field__hint">Optional. Only matters where stamp duty or registration fees apply.</p>
+            </div>
+
+            <fieldset class="field ask-grid__full" style="border:0;padding:0;margin:0">
+              <legend class="field__label" style="padding:0;margin-bottom:8px">
+                Who is the applicant?
+              </legend>
+              <div class="segmented" role="radiogroup" aria-label="Applicant residency status">
+                {% for value, item in residency_options %}
+                  <label class="segmented__option">
+                    <input class="segmented__input" type="radio" name="residency"
+                           value="{{ value }}" {% if loop.first %}checked{% endif %} />
+                    <span class="segmented__face">
+                      <span class="segmented__title">{{ item.label }}</span>
+                      <span class="segmented__blurb">{{ item.blurb }}</span>
+                    </span>
+                  </label>
+                {% endfor %}
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="ask-actions">
+            <button type="submit" class="btn btn--primary btn--lg" id="askBtn">
+              {{ ico.icon('search', 20) }}
+              <span>Research it</span>
+            </button>
+            <p class="ask-footnote">
+              {{ ico.icon('info', 16, cls='ask-footnote__icon') }}
+              <span>
+                No account, no upload, nothing stored about you. Cached answers are
+                instant; a new question shows each live research stage.
+              </span>
+            </p>
+          </div>
+
+          <div class="ask-card__pin" aria-hidden="true">
+            {{ ico.paperclip(32) }}
+          </div>
+        </form>
+
+        <aside class="ask-side" aria-label="What happens after you submit">
+          <div class="sheet sheet--pad">
+            <h3 class="h3" style="margin-bottom:8px">What happens next</h3>
+            <ol class="ask-list">
+              <li>{{ ico.icon('check', 16) }} <span>Your wording is normalized without rejecting unfamiliar banks or products.</span></li>
+              <li>{{ ico.icon('check', 16) }} <span>A fresh cached answer returns immediately, with its research date.</span></li>
+              <li>{{ ico.icon('check', 16) }} <span>A new question opens a live research job with visible stages and source URLs.</span></li>
+              <li>{{ ico.icon('check', 16) }} <span>If live search is unavailable, you get relevant cached alternatives—not a dead end.</span></li>
+            </ol>
+          </div>
+          <div class="notice notice--info">
+            {{ ico.icon('info', 20, cls='notice__icon') }}
+            <span>
+              <strong>Use the examples below for an instant demo.</strong>
+              They are pre-warmed, fully sourced, and ideal when the network is unreliable.
+            </span>
+          </div>
+        </aside>
+      </div>
     </div>
-  </form>
+  </section>
 
   <!-- ═══════════ STARTING POINTS ═══════════ -->
-  <div class="rule-head">
-    <h2 class="h3">Or start from something common</h2>
-    <span class="meta-sm">Pre-warmed &middot; instant answer</span>
-  </div>
-  <div class="chips" style="margin-bottom:32px">
-    {% for tx, bank, residency, state, label, note in examples %}
-      <a class="chip"
-         href="/checklist?transaction_type={{ tx | urlencode }}&amp;bank={{ bank | urlencode }}&amp;residency={{ residency }}{% if state %}&amp;state={{ state | urlencode }}{% endif %}"
-         title="{{ note }}">{{ label }}</a>
-    {% endfor %}
-  </div>
-
-  <!-- ═══════════ CACHE STATS — honest about what is pre-researched ══════════ -->
-  <div class="rule-head">
-    <h2 class="h3">What we already know</h2>
-    <span class="meta-sm">Verified against primary sources</span>
-  </div>
-  <div class="stats-row">
-    <div class="bands">
-      <div class="band">
-        <span class="band__label">Checklists pre-researched</span>
-        <span class="band__value">{{ stats.entries }}</span>
-        <span class="band__note">
-          covering the seed cases the demo walks through, each with its sources recorded
-        </span>
+  <section class="landing__section landing__section--paper-deep" id="examples" aria-labelledby="examples-heading">
+    <div class="shell shell--wide">
+      <div class="rule-head">
+        <h2 class="h2" id="examples-heading">Or start from something common</h2>
+        <span class="meta-sm">Pre-warmed &middot; instant answer</span>
       </div>
-      <div class="band">
-        <span class="band__label">Distinct sources cited</span>
-        <span class="band__value">{{ stats.distinct_sources }}</span>
-        <span class="band__note">
-          bank product pages, RBI directions and state registration department sites
+      <div class="chips example-grid">
+        {% for tx, bank, residency, state, label, note in examples %}
+          <a class="chip"
+             href="/checklist?transaction_type={{ tx | urlencode }}&amp;bank={{ bank | urlencode }}&amp;residency={{ residency }}{% if state %}&amp;state={{ state | urlencode }}{% endif %}"
+             title="{{ note }}">
+            <span class="example-card">
+              <span class="example-card__title">{{ label }}</span>
+              <span class="example-card__note">{{ note }}</span>
+            </span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ ARCHITECTURE ═══════════ -->
+  <section class="landing__section landing__section--ink" id="architecture" aria-labelledby="architecture-heading">
+    <div class="shell shell--wide">
+      <p class="eyebrow">Architecture</p>
+      <h2 class="display" id="architecture-heading">A pipeline built to be audited.</h2>
+      <p class="lede">
+        Search and generation are deliberately separate operations. That separation
+        lets Kaagaz control citations, survive one provider outage without losing
+        the other, and store every answer with the evidence used to construct it.
+      </p>
+
+      <ol class="arch-grid">
+        <li>
+          <span class="arch-num" aria-hidden="true">01</span>
+          <h3>Normalize the request</h3>
+          <p>Transaction, bank, state, and residency are canonicalized for matching. Unknown values are preserved because they may be the most important part of the question.</p>
+        </li>
+        <li>
+          <span class="arch-num" aria-hidden="true">02</span>
+          <h3>Check the research record</h3>
+          <p>Fresh entries answer immediately. A stale entry can be served transparently when live research fails, with its age displayed.</p>
+        </li>
+        <li>
+          <span class="arch-num" aria-hidden="true">03</span>
+          <h3>Search and read sources</h3>
+          <p>Direct keyless search finds candidate pages; the app fetches and reads the text. A model-backed web-search fallback is used only when direct search is unavailable.</p>
+        </li>
+        <li>
+          <span class="arch-num" aria-hidden="true">04</span>
+          <h3>Generate through a provider chain</h3>
+          <p>Structure comes from an ordered registry, not one API. Providers without keys are skipped; unavailable providers are temporarily removed from rotation.</p>
+        </li>
+        <li>
+          <span class="arch-num" aria-hidden="true">05</span>
+          <h3>Enforce honesty in code</h3>
+          <p>Figures must be sourced. Stamp duty is never attributed to the RBI. Rates are published as bands. Missing disclosures are stated explicitly.</p>
+        </li>
+        <li>
+          <span class="arch-num" aria-hidden="true">06</span>
+          <h3>File one audit record</h3>
+          <p>The checklist, query, sources, timestamps, model, and provider are stored together. The result page can show that exact research record.</p>
+        </li>
+      </ol>
+
+      <div class="provider-chain" role="note" aria-label="Model provider fallback order">
+        <strong>Generation order:</strong>
+        <span>OpenRouter</span>
+        <span aria-hidden="true">&rarr;</span>
+        <span>Groq, with live model discovery</span>
+        <span aria-hidden="true">&rarr;</span>
+        <span>NVIDIA NIM</span>
+      </div>
+      <p class="body">
+        Search and generation can fail independently. That is intentional: a search
+        outage does not disable structuring, and a generation outage does not erase
+        retrieved evidence. When both are unavailable, the interface suggests the
+        closest cached research instead of displaying an empty error.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════ COVERAGE AND HONESTY ═══════════ -->
+  <section class="landing__section" aria-labelledby="coverage-heading">
+    <div class="shell shell--wide">
+      <div class="rule-head">
+        <h2 class="h2" id="coverage-heading">What we already know</h2>
+        <span class="meta-sm">Verified against primary sources</span>
+      </div>
+      <div class="stats-row">
+        <div class="bands">
+          <div class="band">
+            <span class="band__label">Checklists pre-researched</span>
+            <span class="band__value">{{ stats.entries }}</span>
+            <span class="band__note">
+              Covering the seed cases the demo walks through, each with its sources recorded
+            </span>
+          </div>
+          <div class="band">
+            <span class="band__label">Distinct sources cited</span>
+            <span class="band__value">{{ stats.distinct_sources }}</span>
+            <span class="band__note">
+              Bank product pages, RBI directions and state registration department sites
+            </span>
+          </div>
+          <div class="band">
+            <span class="band__label">Failure behavior</span>
+            <span class="band__value">Guided</span>
+            <span class="band__note">
+              Search outages show overlapping cached cases and retry options
+            </span>
+          </div>
+        </div>
+        <div class="stats-row__stamp" aria-hidden="true">
+          {{ ico.ink_stamp('SOURCED', 96) }}
+        </div>
+      </div>
+
+      <div class="notice notice--info">
+        {{ ico.icon('info', 20, cls='notice__icon') }}
+        <span>
+          <strong>The cache is a floor, not a ceiling.</strong>
+          Those {{ stats.entries }} entries exist so the common cases answer instantly
+          and survive a flaky connection. Anything else—any bank, any product, any
+          state—is researched live and then filed into the same record.
         </span>
       </div>
     </div>
-    <!-- The ink stamp sits here because this is the block making a claim about
-         verification. It annotates that claim rather than decorating the page. -->
-    <div class="stats-row__stamp" aria-hidden="true">
-      {{ ico.ink_stamp('SOURCED', 96) }}
-    </div>
-  </div>
+  </section>
 
-  <div class="notice notice--info">
-    {{ ico.icon('info', 20, cls='notice__icon') }}
-    <span>
-      <strong>The cache is a floor, not a ceiling.</strong>
-      Those {{ stats.entries }} entries exist so the common cases answer instantly
-      and survive a flaky connection. Anything else — any bank, any product, any
-      state — is researched live and then filed into the same record.
-    </span>
-  </div>
+  <!-- ═══════════ QUESTIONS ═══════════ -->
+  <section class="landing__section landing__section--paper-deep" aria-labelledby="faq-heading">
+    <div class="shell shell--wide">
+      <div class="rule-head">
+        <h2 class="h2" id="faq-heading">Questions judges usually ask</h2>
+        <span class="meta-sm">Straight answers</span>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Why are bank, state, and residency all required?</summary>
+          <p>
+            Because each changes the documents. A bank imposes its own proofs, a state
+            controls stamp duty and registration, and residency determines FEMA and
+            attestation requirements. Removing any input would make some correct
+            answers impossible.
+          </p>
+        </details>
+        <details>
+          <summary>What happens when live search is blocked?</summary>
+          <p>
+            Kaagaz first serves a stale answer if one exists. Otherwise it reports the
+            outage and recommends cached cases with overlapping transactions or banks,
+            so the visitor can still make progress.
+          </p>
+        </details>
+        <details>
+          <summary>Why does it show a rate band instead of one rate?</summary>
+          <p>
+            Published loan pricing varies by credit score, amount, tenure, and fees.
+            A single number would imply a guarantee the bank did not make. Kaagaz
+            therefore reports the sourced band—or says the rate is not publicly disclosed.
+          </p>
+        </details>
+        <details>
+          <summary>Is this legal or financial advice?</summary>
+          <p>
+            No. It is an informational research tool. Every material decision should be
+            checked against the cited bank page, registrar notification, RBI direction,
+            or a qualified professional.
+          </p>
+        </details>
+      </div>
+
+      <div class="hero__actions" style="margin-top:24px">
+        <a class="btn btn--primary btn--lg" href="#ask">
+          {{ ico.icon('search', 20) }}
+          <span>Ask Kaagaz now</span>
+        </a>
+        <a class="btn btn--quiet btn--lg" href="/about">
+          {{ ico.icon('book', 20) }}
+          <span>Read how it works</span>
+        </a>
+      </div>
+    </div>
+  </section>
 
 </div>
 {% endblock %}

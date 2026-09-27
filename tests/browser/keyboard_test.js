@@ -12,7 +12,9 @@
  *   4. ArrowDown again advances, ArrowUp wraps back.
  *   5. Enter on a focused chip navigates to the checklist.
  *   6. Typing "/" into a focused text field is NOT hijacked.
- *   7. No uncaught page errors along the way.
+ *   7. Submitting the landing-page form opens a checklist result.
+ *   8. Cmd-K also focuses the search field.
+ *   9. No uncaught page errors along the way.
  */
 const puppeteer = require('puppeteer-core');
 
@@ -74,7 +76,19 @@ function check(name, actual, expected, ok) {
   await p.keyboard.type('a/b');
   check('typing "a/b" stays literal', await p.$eval('#transaction_type', (el) => el.value), 'a/b');
 
-  // 7. Cmd-K also focuses, and a second one does not double-toggle
+  // 7. The landing-page form must submit to a result, not reload the page.
+  await p.goto(BASE + '/', { waitUntil: 'networkidle0' });
+  await p.$eval('#transaction_type', (el) => { el.value = 'home loan'; });
+  await p.$eval('#bank', (el) => { el.value = 'HDFC Bank'; });
+  await p.focus('#bank');
+  await Promise.all([
+    p.waitForNavigation({ waitUntil: 'networkidle0' }),
+    p.keyboard.press('Enter'),
+  ]);
+  check('form submit opens a checklist', p.url().includes('/checklist?transaction_type='), true);
+  check('submitted query reaches the result page', await p.evaluate(() => document.body.textContent.includes('Documents ready')), true);
+
+  // 8. Cmd-K also focuses, and a second one does not double-toggle
   await p.goto(BASE + '/', { waitUntil: 'networkidle0' });
   await p.keyboard.down('Meta'); await p.keyboard.press('k'); await p.keyboard.up('Meta');
   check('Cmd-K focuses search', (await active()).id, 'transaction_type');

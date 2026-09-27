@@ -1,0 +1,220 @@
+{#
+  Kaagaz — bubble characters.
+
+  A cast of soft, rounded, friendly people used as illustration — never as
+  icons and never carrying meaning on their own. They appear beside content
+  they belong to: the person at the counter, the person handing over a file,
+  the person who has just remembered something.
+
+  These are a deliberately different layer from _icons.html. The icon set is
+  fully outlined at a single 1.75 stroke weight and is used for regulatory
+  buckets, where a glyph has to be unambiguous at 16px. These are filled and
+  shaded, and they are decorative. Mixing the two styles in one place is what
+  makes an interface look assembled rather than designed, so they never are.
+
+  House rules:
+    • 200x200 viewBox for every character, so they scale interchangeably.
+    • One warm highlight per form, matching the CSS sheen.
+    • Faces are the same three marks everywhere: two eyes and one smile arc.
+    • Skin and hair tones stay in a narrow warm range; clothing carries the
+      brand palette so the cast reads as one family.
+#}
+
+{# ── Shared face, so every character has the same expression ────────── #}
+{% macro _face(cx=100, cy=98, r=3.2) -%}
+<circle cx="{{ cx - 11 }}" cy="{{ cy }}" r="{{ r }}" fill="#2F3238"/>
+<circle cx="{{ cx + 11 }}" cy="{{ cy }}" r="{{ r }}" fill="#2F3238"/>
+<path d="M{{ cx - 9 }} {{ cy + 14 }}c4 5.4 14 5.4 18 0"
+      stroke="#2F3238" stroke-width="3" fill="none" stroke-linecap="round"/>
+{%- endmacro %}
+
+{% macro _blush(cx=100, cy=110) -%}
+<ellipse cx="{{ cx - 20 }}" cy="{{ cy }}" rx="6.5" ry="4.2" fill="#E58A73" fill-opacity="0.26"/>
+<ellipse cx="{{ cx + 20 }}" cy="{{ cy }}" rx="6.5" ry="4.2" fill="#E58A73" fill-opacity="0.26"/>
+{%- endmacro %}
+
+{% macro _shadow(cx=100, cy=180, rx=48) -%}
+<ellipse cx="{{ cx }}" cy="{{ cy }}" rx="{{ rx }}" ry="8" fill="#7A603A" fill-opacity="0.10"/>
+{%- endmacro %}
+
+{#
+  A soft vertical gradient is what gives a body volume. An earlier version used
+  a flat white overlay clipped to half the torso, which drew a hard vertical
+  seam straight down the middle of every character and read as a zip, not as
+  shading. Gradients are used instead.
+#}
+{% macro _body(id, tone, top, bottom) -%}
+<defs>
+  <linearGradient id="{{ id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="{{ top }}"/>
+    <stop offset="1" stop-color="{{ bottom }}"/>
+  </linearGradient>
+</defs>
+<path d="M{{ 100 - 42 }} 180c0-27 19-45 42-45s42 18 42 45z" fill="url(#{{ id }})"/>
+{%- endmacro %}
+
+
+{#
+  1. Presenting a document — the core gesture of the product: handing over
+     the file you were asked for. The hand grips the document's left edge, so
+     the paper reads as held rather than floating beside the figure.
+#}
+{% macro bubble_present(size=200, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 200 200" fill="none"
+     class="bub {{ cls }}" aria-hidden="true" focusable="false">
+  {{ _shadow(100, 180, 50) }}
+  {{ _body('gP', '#2E5D8C', '#3B6E9E', '#28507A') }}
+  <!-- left arm, relaxed -->
+  <path d="M66 150c-10-3-17-10-21-19" stroke="#28507A" stroke-width="13" stroke-linecap="round"/>
+  <!-- right arm, reaching out to the file -->
+  <path d="M136 152c11-3 18-8 22-16" stroke="#28507A" stroke-width="13" stroke-linecap="round"/>
+  <!-- the file being handed over -->
+  <rect x="150" y="92" width="44" height="56" rx="8" fill="#FFFDF8" stroke="#E7DAC2" stroke-width="2"/>
+  <path d="M161 108h22M161 119h22M161 130h13" stroke="#9AA3B0" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="161" cy="140" r="6" fill="#8FA8C8"/>
+  <!-- hand gripping the near edge, drawn last so it sits on top of the paper -->
+  <circle cx="154" cy="134" r="9.5" fill="var(--bub-skin, #E8B48C)"/>
+  <!-- head -->
+  <circle cx="100" cy="96" r="35" fill="var(--bub-skin, #E8B48C)"/>
+  <path d="M100 61a35 35 0 0 0-35 35c0-9 8-16 35-16s35 7 35 16a35 35 0 0 0-35-35z"
+        fill="var(--bub-hair, #3A2E28)"/>
+  <ellipse cx="84" cy="80" rx="11" ry="7" fill="#FFFFFF" fill-opacity="0.30" transform="rotate(-24 84 80)"/>
+  {{ _face(100, 100) }}
+  {{ _blush(100, 112) }}
+</svg>
+{%- endmacro %}
+
+
+{#
+  2. Carrying a stack of papers — the pre-warmed cache made visible.
+     The stack is held in front of the chest, below the head. Drawn after the
+     body and before the hands; an earlier version drew it at head height,
+     where the head covered the middle of it and the visible edges read as a
+     white collar rather than a pile of documents.
+#}
+{% macro bubble_stack(size=200, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 200 200" fill="none"
+     class="bub {{ cls }}" aria-hidden="true" focusable="false">
+  {{ _shadow(100, 180, 50) }}
+  {{ _body('gS', '#7A4B8A', '#8B5A9B', '#6B3F7A') }}
+  <path d="M64 152c-10-3-17-10-20-18" stroke="#6B3F7A" stroke-width="13" stroke-linecap="round"/>
+  <path d="M136 152c10-3 17-10 20-18" stroke="#6B3F7A" stroke-width="13" stroke-linecap="round"/>
+  <!-- the stack, in front of the chest, entirely below the head -->
+  <rect x="62" y="164" width="76" height="22" rx="7" fill="#FFFDF8" stroke="#E7DAC2" stroke-width="2" transform="rotate(-4 100 175)"/>
+  <rect x="63" y="146" width="74" height="22" rx="7" fill="#FFFDF8" stroke="#E7DAC2" stroke-width="2" transform="rotate(3 100 157)"/>
+  <rect x="64" y="128" width="72" height="22" rx="7" fill="#FFFDF8" stroke="#E7DAC2" stroke-width="2" transform="rotate(-2 100 139)"/>
+  <path d="M78 138h24" stroke="#9AA3B0" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="112" cy="137" r="6" fill="#B79BCB"/>
+  <circle cx="100" cy="156" r="6" fill="#B79BCB"/>
+  <circle cx="90" cy="174" r="6" fill="#B79BCB"/>
+  <!-- both hands over the front of the stack -->
+  <circle cx="72" cy="156" r="9" fill="var(--bub-skin, #C98C63)"/>
+  <circle cx="128" cy="154" r="9" fill="var(--bub-skin, #C98C63)"/>
+  <circle cx="100" cy="86" r="33" fill="var(--bub-skin, #C98C63)"/>
+  <path d="M100 53a33 33 0 0 0-33 33c0-8 8-15 33-15s33 7 33 15a33 33 0 0 0-33-33z"
+        fill="var(--bub-hair, #241C18)"/>
+  <ellipse cx="85" cy="71" rx="10" ry="6.5" fill="#FFFFFF" fill-opacity="0.30" transform="rotate(-24 85 71)"/>
+  {{ _face(100, 90) }}
+  {{ _blush(100, 102) }}
+</svg>
+{%- endmacro %}
+
+
+{#
+  3. Thinking — a lightbulb thought bubble, for the "what we could not
+     confirm" honesty moment.
+#}
+{% macro bubble_think(size=200, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 200 200" fill="none"
+     class="bub {{ cls }}" aria-hidden="true" focusable="false">
+  {{ _shadow(100, 180, 48) }}
+  {{ _body('gT', '#2F7A6B', '#38907E', '#276758') }}
+  <path d="M66 152c-9-3-15-10-18-18" stroke="#276758" stroke-width="13" stroke-linecap="round"/>
+  <path d="M136 150c10-2 16-8 20-16" stroke="#276758" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="158" cy="130" r="9" fill="var(--bub-skin, #F0C9A6)"/>
+  <!-- thought bubble -->
+  <circle cx="152" cy="46" r="20" fill="#FFFFFF" fill-opacity="0.85"/>
+  <circle cx="136" cy="74" r="8" fill="#FFFFFF" fill-opacity="0.70"/>
+  <circle cx="128" cy="94" r="4.5" fill="#FFFFFF" fill-opacity="0.55"/>
+  <!-- bulb glyph inside the bubble -->
+  <circle cx="152" cy="45" r="8.5" fill="#F5D67B"/>
+  <path d="M148 56h8M149 60h6" stroke="#C9A63F" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="98" cy="92" r="33" fill="var(--bub-skin, #F0C9A6)"/>
+  <path d="M98 59a33 33 0 0 0-33 33c0-8 8-15 33-15s33 7 33 15a33 33 0 0 0-33-33z"
+        fill="var(--bub-hair, #5A3A22)"/>
+  <ellipse cx="83" cy="77" rx="10" ry="6.5" fill="#FFFFFF" fill-opacity="0.32" transform="rotate(-24 83 77)"/>
+  {{ _face(98, 96) }}
+  {{ _blush(98, 108) }}
+</svg>
+{%- endmacro %}
+
+
+{#
+  4. Celebrating — the finish state: every document collected.
+#}
+{% macro bubble_done(size=200, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 200 200" fill="none"
+     class="bub {{ cls }}" aria-hidden="true" focusable="false">
+  {{ _shadow(100, 180, 48) }}
+  {{ _body('gD', '#C98A2E', '#D89B3C', '#A9741F') }}
+  <!-- both arms up -->
+  <path d="M66 146c-8-8-11-18-10-28" stroke="#A9741F" stroke-width="13" stroke-linecap="round"/>
+  <path d="M134 146c8-8 11-18 10-28" stroke="#A9741F" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="57" cy="112" r="9" fill="var(--bub-skin, #8E5A3B)"/>
+  <circle cx="143" cy="112" r="9" fill="var(--bub-skin, #8E5A3B)"/>
+  <!-- confetti -->
+  <circle cx="36" cy="60" r="4.5" fill="#E58A73"/>
+  <circle cx="166" cy="52" r="5" fill="#7FB2D9"/>
+  <rect x="30" y="92" width="8" height="8" rx="2.5" fill="#8FBF9F" transform="rotate(-18 34 96)"/>
+  <rect x="164" y="86" width="8" height="8" rx="2.5" fill="#E8C55F" transform="rotate(16 168 90)"/>
+  <circle cx="100" cy="94" r="33" fill="var(--bub-skin, #8E5A3B)"/>
+  <path d="M100 61a33 33 0 0 0-33 33c0-8 8-15 33-15s33 7 33 15a33 33 0 0 0-33-33z"
+        fill="var(--bub-hair, #1F1815)"/>
+  <ellipse cx="85" cy="79" rx="10" ry="6.5" fill="#FFFFFF" fill-opacity="0.26" transform="rotate(-24 85 79)"/>
+  {{ _face(100, 98) }}
+  {{ _blush(100, 110) }}
+</svg>
+{%- endmacro %}
+
+
+{#
+  5. Waiting — the researching state: a person at a counter while the search
+     runs. Used on the cold-query view.
+#}
+{% macro bubble_wait(size=200, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 200 200" fill="none"
+     class="bub {{ cls }}" aria-hidden="true" focusable="false">
+  {{ _shadow(100, 180, 46) }}
+  {{ _body('gW', '#3E6B9C', '#4C7CAC', '#33577F') }}
+  <path d="M70 152c-9-3-15-9-18-17" stroke="#33577F" stroke-width="12" stroke-linecap="round"/>
+  <path d="M132 154c9-2 15-8 19-15" stroke="#33577F" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="153" cy="134" r="8.5" fill="var(--bub-skin, #D9A57E)"/>
+  <circle cx="102" cy="96" r="32" fill="var(--bub-skin, #D9A57E)"/>
+  <path d="M102 64a32 32 0 0 0-32 32c0-8 8-14 32-14s32 6 32 14a32 32 0 0 0-32-32z"
+        fill="var(--bub-hair, #2E2A26)"/>
+  <ellipse cx="88" cy="81" rx="10" ry="6" fill="#FFFFFF" fill-opacity="0.30" transform="rotate(-24 88 81)"/>
+  {{ _face(102, 100) }}
+  {{ _blush(102, 112) }}
+  <!-- the searching dot trail -->
+  <circle cx="156" cy="112" r="5" fill="#B7C3D2"/>
+  <circle cx="170" cy="100" r="4" fill="#CBD5E0"/>
+  <circle cx="180" cy="86" r="3" fill="#DCE3EB"/>
+</svg>
+{%- endmacro %}
+
+
+{#
+  The whole cast, for callers that just want the family.
+#}
+{% macro cast(only=None, size=160) -%}
+{% set all = {
+  'present': bubble_present,
+  'stack': bubble_stack,
+  'think': bubble_think,
+  'done': bubble_done,
+  'wait': bubble_wait,
+} %}
+{% for key, macro in all.items() %}
+  {% if only is none or key in only %}{{ macro(size, cls='bub--' ~ key) }}{% endif %}
+{% endfor %}
+{%- endmacro %}

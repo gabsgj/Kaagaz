@@ -1,0 +1,8 @@
+.env
+instance/
+*.db
+*.sqlite3
+venv/
+.pytest_cache/
+shots/
+node_modules/

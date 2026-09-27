@@ -226,6 +226,9 @@
                               'Research could not be completed.');
           err.kind = body.error && body.error.kind;
           err.retryable = !body.error || body.error.retryable !== false;
+          // Cached cases that overlap the request, so a search outage is a
+          // detour rather than a dead end.
+          err.suggestions = (body.error && body.error.suggestions) || null;
           throw err;
         }
         // still working — report what is genuinely true, then poll again

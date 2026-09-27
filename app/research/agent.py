@@ -30,17 +30,119 @@ from .synthesize import synthesize, REGULATORY_LABELS
 
 
 class ResearchFailed(Exception):
-    """Typed failure the UI renders as a specific, non-blank message."""
+    """Typed failure the UI renders as a specific, non-blank message.
 
-    def __init__(self, message, kind="search", retryable=True):
+    ``suggestions`` carries links to cached cases that overlap the request, so
+    a dead end becomes "here is what we do know" rather than a blank error.
+    """
+
+    def __init__(self, message, kind="search", retryable=True, suggestions=None):
         super().__init__(message)
         self.message = message
         self.kind = kind
         self.retryable = retryable
+        self.suggestions = suggestions or []
 
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _similar_entries(app, req, limit=4):
+    """Cached cases that overlap a request we could not research.
+
+    Live search being down should never be a dead end. This ranks the
+    pre-researched cases by how much they share with the request — same
+    transaction type first, then same bank — and returns links, so the failure
+    screen can say "we could not research that, but here is what we do know".
+    """
+    try:
+        entries = cache_mod.list_entries(app, limit=200)
+    except Exception:
+        return []
+    tx = (req.get("transaction_type") or "").strip().lower()
+    bank = (req.get("bank") or "").strip().lower()
+    # Callers pass a parsed request containing both the canonical residency
+    # code (`residency`) and a long search phrase (`residency_phrase`). The
+    # cache stores the code, so match the code; otherwise a long English phrase
+    # never equals `resident` and every overlapping suggestion is lost.
+    residency_raw = (req.get("residency") or "").strip().lower()
+    if residency_raw in refdata.RESIDENCY:
+        residency = residency_raw
+    else:
+        # A worker may receive an unparsed request whose residency is a phrase
+        # rather than a code. Match only exact known phrases; never let an
+        # unknown value silently become `resident` and earn a false point.
+        phrase = (req.get("residency_phrase") or "").strip().lower()
+        residency = {
+            value.lower(): key
+            for key, value in refdata.RESIDENCY_PHRASES.items()
+        }.get(phrase, "")
+
+    scored = []
+    for e in entries:
+        # The cache stores the transaction type under
+        # `loan_or_transaction_type` and residency under
+        # `applicant_residency_status`; older code reaching for
+        # `transaction_type`/`residency` got nothing and returned an empty
+        # suggestion list on exactly the failure path this exists to fix.
+        etx = (e.get("loan_or_transaction_type") or "").strip().lower()
+        ebank = (e.get("bank") or "").strip().lower()
+        eres = (e.get("applicant_residency_status") or "").strip().lower()
+        score = 0
+        if tx and etx and (tx == etx or tx in etx or etx in tx):
+            score += 4
+        if bank and ebank and (bank == ebank or bank in ebank or ebank in bank):
+            score += 2
+        if residency and eres and residency == eres:
+            score += 1
+        if score:
+            scored.append((score, e))
+    scored.sort(key=lambda pair: (-pair[0], pair[1].get("loan_or_transaction_type") or ""))
+
+    out = []
+    for score, e in scored[:limit]:
+        tx = e.get("loan_or_transaction_type") or ""
+        bank = e.get("bank") or ""
+        residency = e.get("applicant_residency_status") or ""
+        state = e.get("state") or ""
+        out.append({
+            "transaction_type": tx,
+            "bank": bank,
+            "residency": residency,
+            "state": state,
+            "label": _label_for(tx, bank, residency),
+            "href": _href_for(tx, bank, residency, state),
+        })
+    return out
+
+
+def _label_for(tx, bank, residency):
+    parts = [tx or "Document checklist"]
+    if bank:
+        parts.append(bank)
+    if residency and residency != "not_applicable":
+        parts.append(residency.replace("_", " "))
+    return " · ".join(p for p in parts if p)
+
+
+def _href_for(tx, bank, residency, state):
+    """Build the checklist URL by hand.
+
+    `url_for` needs an application context, and this runs inside a background
+    worker thread where there is none — the first version raised
+    "Working outside of application context" on exactly the failure path this
+    code exists to serve. The route is a fixed shape, so build it directly.
+    """
+    from urllib.parse import quote
+    parts = [
+        "transaction_type=" + quote(tx or ""),
+        "bank=" + quote(bank or ""),
+        "residency=" + quote(residency or ""),
+    ]
+    if state:
+        parts.append("state=" + quote(state))
+    return "/checklist?" + "&".join(parts)
 
 
 def _as_of(entry):
@@ -175,6 +277,7 @@ def answer(app, request_dict, on_stage=None, force_refresh=False):
             "We couldn't reach the research service just now. "
             "Please try again in a moment.",
             kind="search_unavailable",
+            suggestions=_similar_entries(app, req),
         ) from exc
 
     # ── 3. Synthesis ────────────────────────────────────────────────────────

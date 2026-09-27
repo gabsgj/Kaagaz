@@ -46,7 +46,8 @@ def ask():
         result = agent.answer(current_app._get_current_object(), req)
     except agent.ResearchFailed as exc:
         return jsonify({"error": exc.message, "kind": exc.kind,
-                        "retryable": exc.retryable}), 503
+                        "retryable": exc.retryable,
+                        "suggestions": exc.suggestions or []}), 503
     return jsonify(result)
 
 
@@ -73,9 +74,11 @@ def _worker(app, job):
         result = agent.answer(app, job["request"], on_stage=on_stage)
         jobs.finish(job, result)
     except agent.ResearchFailed as exc:
-        jobs.fail(job, exc.message, exc.kind, exc.retryable)
+        jobs.fail(job, exc.message, exc.kind, exc.retryable,
+                  suggestions=getattr(exc, "suggestions", None))
     except SearchError as exc:
-        jobs.fail(job, "We couldn't reach the research service just now.")
+        jobs.fail(job, "We couldn't reach the research service just now.",
+                  suggestions=agent._similar_entries(app, job["request"]))
 
 
 @research_bp.route("/status/<job_id>")

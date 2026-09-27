@@ -143,23 +143,104 @@ function auditPage() {
     const L1 = lum(a), L2 = lum(b);
     return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
   };
-  const bgOf = (el) => {
+
+  // Every colour the text could actually be sitting on, nearest first.
+  //
+  // Two things this has to get right, both learned the hard way:
+  //
+  // 1. A gradient puts its colour in `background-image` and leaves
+  //    `backgroundColor` transparent, so the old single-background lookup walked
+  //    straight past every gradient surface and measured the text against
+  //    whatever was further up the tree.
+  // 2. Those gradients are mostly SEMI-TRANSPARENT. The page ground itself is
+  //    a faint speckle drawn as radial-gradients at ~3% alpha over the paper
+  //    colour. Reading those RGB triples as if they were opaque measured the
+  //    whole page against near-black and reported every heading at 1.3:1.
+  //
+  // So: collect layers outward, composite every translucent stop over the
+  // nearest opaque background beneath it, and return the resulting set. The
+  // contrast check then takes the WORST of them, so if any part of a gradient
+  // fails AA the gate fails.
+  const PAPER = [251, 247, 238];
+  const over = (fg, alpha, bg) => fg.map((c, i) => c * alpha + bg[i] * (1 - alpha));
+
+  const collectLayers = (el) => {
+    const layers = [];
     let node = el;
+    let base = null;
     while (node && node !== document.documentElement) {
-      const c = getComputedStyle(node).backgroundColor;
-      const p = parse(c);
-      if (p.length === 3 && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return p;
+      const cs = getComputedStyle(node);
+      const solid = (cs.backgroundColor || '').match(/rgba?\(([^)]+)\)/);
+      if (solid) {
+        const parts = (solid[1].match(/[\d.]+/g) || []).map(Number);
+        if (parts.length >= 3) {
+          const a = parts.length > 3 ? parts[3] : 1;
+          if (a >= 1) { base = parts.slice(0, 3); break; }
+          layers.push({ alpha: a, colors: [parts.slice(0, 3)] });
+        }
+      }
+      const img = cs.backgroundImage || '';
+      if (img.includes('gradient(')) {
+        const stops = [];
+        for (const m of img.matchAll(/rgba?\(([^)]+)\)/g)) {
+          const p = (m[1].match(/[\d.]+/g) || []).map(Number);
+          if (p.length >= 3) stops.push({ color: p.slice(0, 3), alpha: p.length > 3 ? p[3] : 1 });
+        }
+        for (const m of img.matchAll(/#[0-9a-f]{3,8}/gi)) {
+          let hex = m[0].slice(1);
+          if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+          if (hex.length >= 6) {
+            stops.push({
+              color: [parseInt(hex.slice(0, 2), 16),
+                      parseInt(hex.slice(2, 4), 16),
+                      parseInt(hex.slice(4, 6), 16)],
+              alpha: hex.length >= 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1,
+            });
+          }
+        }
+        if (stops.length) layers.push({ gradient: true, stops });
+      }
       node = node.parentElement;
     }
-    return [251, 247, 238];
+    return { layers, base: base || PAPER };
   };
+
+  const bgCandidates = (el) => {
+    const { layers, base } = collectLayers(el);
+    // `under` is always a set of candidate colours, nearest-composited. Each
+    // layer is laid over every candidate beneath it, so a translucent stop
+    // resolves against the actual colour behind it rather than against a
+    // single assumed one.
+    let under = [base];
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const L = layers[i];
+      const src = L.gradient
+        ? L.stops.map(s => ({ color: s.color, alpha: s.alpha }))
+        : L.colors.map(c => ({ color: c, alpha: L.alpha }));
+      const next = [];
+      for (const s of src) {
+        for (const b of under) {
+          next.push(over(s.color, s.alpha, b).map(Math.round));
+        }
+      }
+      under = next.length ? next : under;
+    }
+    return under;
+  };
+
+  const worstRatio = (fg, bgs) =>
+    bgs.reduce((min, bg) => Math.min(min, ratio(fg, bg)), Infinity);
 
   const textNodes = document.querySelectorAll(
     'p, li, dd, dt, h1, h2, h3, h4, span, a, button, label, summary, td, th, code, legend'
   );
   for (const el of textNodes) {
+    // Any non-empty direct text counts. This was `length > 1`, which silently
+    // skipped single-character nodes — and the flip-board digits are single
+    // characters. That is how white-on-white digits got shipped behind a board
+    // that still reported itself geometrically stable.
     const hasText = Array.from(el.childNodes)
-      .some(n => n.nodeType === 3 && n.textContent.trim().length > 1);
+      .some(n => n.nodeType === 3 && n.textContent.trim().length > 0);
     if (!hasText) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none') continue;
@@ -168,7 +249,7 @@ function auditPage() {
     const weight = parseInt(cs.fontWeight, 10) || 400;
     const large = size >= 24 || (size >= 18.66 && weight >= 700);
     const need = large ? 3.0 : 4.5;
-    const cr = ratio(parse(cs.color), bgOf(el));
+    const cr = worstRatio(parse(cs.color), bgCandidates(el));
     if (cr < need) {
       problems.push({
         kind: 'contrast',

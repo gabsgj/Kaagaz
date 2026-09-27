@@ -896,3 +896,56 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-09-27 12:15] FEATURE: keyboard navigation, because the demo script advertised it and it did not exist. "/" or Cmd/Ctrl-K focuses search, Escape blurs, arrows walk the example chips, Enter follows. Added tests/browser/keyboard_test.js. It immediately caught a real bug: the "/" handler ate the character it was supposed to type, so `a/b` came out as `b`. Root cause was treating "focused in the search field" as not-typing. Fixed to defer to the caret on any text entry.
 
 [2026-09-27 12:20] DELIVERABLES: .github/workflows/deploy.yml (verify-then-deploy, no-op safe without credentials), Dockerfile (multi-stage, unprivileged uid 10001, volume for the DB, healthcheck, gthread single worker), Procfile, .dockerignore, gunicorn pinned in requirements.txt, docs/demo-script.md (8.5 min, every command verified by running it). Gunicorn boot verified serving /, /api/research/health and a real checklist.
+[2026-09-27T06:43:11.174199] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:43:11.175718] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T07:19:39.918720] AI_CALL provider=openrouter prompt_len=34934 success=False latency_ms=1274 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T07:19:43.160695] AI_CALL provider=groq prompt_len=34934 success=True latency_ms=3227
+[2026-09-27T07:21:08.656408] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T07:21:08.659245] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T07:27:11.663072] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T07:27:11.668628] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T07:37:07.824544] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T07:37:07.828069] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T07:39:03.670811] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T07:39:03.674633] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T07:40:24.272798] AI_CALL provider=openrouter prompt_len=16283 success=False latency_ms=2141 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T07:40:28.151797] AI_CALL provider=groq prompt_len=16283 success=True latency_ms=3868
+[2026-09-27T07:50:37.323457] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T07:50:37.328902] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+
+[2026-09-27 13:35] BUGFIX: Landing form had no action/method, so Research resubmitted `/` and looked like no results. It now GETs `/checklist`; added Python and real-keypress regression coverage. Fixed failure suggestions to use cache residency codes, corrected sorting, routed suggestions through jobs/status/`/ask`, and made throttled direct search use the bounded retry instead of swallowing it. 188 Python tests.
+
+[2026-09-27 13:40] UI: Rebuilt `/` as a full-width landing page with a sticky liquid-glass navbar, hero, live-form panel, example grid, architecture/provider-chain section, coverage, FAQ, and CTA. Kept the paper design system and 8px/radii discipline. Gates: responsive 21/21, keyboard 12/12, jitter stable, demo 14/14.
+
+[2026-09-27 13:45] SUBMISSION: Added `docs/submission/submission.md` (255- and 155-word statements), `video-script.md`, `cover.png`, HTML/PDF slides, `.bobignore`, and missing-item checklist. Repo remains private; deployment URL, public visibility, Bob screenshots, and MP4 still require user action.
+[2026-09-27T08:00:03.483753] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T08:00:03.487774] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T10:43:57.491823] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T10:43:57.493190] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T10:44:18.083973] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T10:44:18.085292] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T10:46:10.534254] AI_CALL provider=openrouter prompt_len=28949 success=False latency_ms=453 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T10:46:15.188301] AI_CALL provider=groq prompt_len=28949 success=True latency_ms=4651
+[2026-09-27T10:46:15.854623] AI_CALL provider=groq prompt_len=19677 success=False latency_ms=143 error=429 Client Error: Too Many Requests for url: https://api.groq.com/openai/v1/chat
+[2026-09-27T10:46:55.616798] AI_CALL provider=nvidia_nim prompt_len=19677 success=False latency_ms=39761 error=unparseable JSON
+[2026-09-27T10:50:50.889277] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T10:50:50.890518] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T10:56:52.410458] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T10:56:52.411791] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:04:04.515563] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:04:04.517039] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:05:38.753470] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:05:38.755265] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:11:42.588391] AI_CALL provider=openrouter prompt_len=571 success=False latency_ms=403 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T11:11:43.664304] AI_CALL provider=groq prompt_len=571 success=True latency_ms=1072
+[2026-09-27T11:11:52.534545] AI_CALL provider=groq prompt_len=566 success=True latency_ms=742
+[2026-09-27T11:12:28.501867] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:12:28.502758] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:12:44.027897] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:12:44.028874] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:27:09.968073] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:27:09.969411] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:27:23.452752] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:27:23.453584] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T11:49:29.145464] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T11:49:29.148501] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0

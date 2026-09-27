@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "_icons.html" as ico %}
+{% import "_bubble.html" as bub %}
 {% block title %}Kaagaz — researching {{ request.transaction_type }}{% endblock %}
 
 {% block content %}
@@ -21,6 +22,10 @@
     <p class="result-head__summary" id="researchQuestion">
       Not in the cache. Researching it now, live.
     </p>
+  </div>
+
+  <div class="bub-stage">
+    {{ bub.bubble_wait(160, 'bub--float') }}
   </div>
 
   <!-- ══════════ The board turns into the research log ══════════
@@ -58,8 +63,9 @@
   </div>
 
   <div class="void" id="researchFailed" hidden>
-    <div class="void__art">{{ ico.icon('alert', 56) }}</div>
+    <div class="void__art">{{ bub.bubble_think(168) }}</div>
     <p class="void__text" id="failureMessage"></p>
+    <div id="failureSuggestions" hidden></div>
     <div class="void__actions">
       <button type="button" class="btn btn--primary" id="retryBtn">Try again</button>
       <a href="/" class="btn btn--quiet">Ask something else</a>
@@ -107,7 +113,7 @@ window.addEventListener('DOMContentLoaded', function () {
     fill.style.width = Math.min(95, (seconds / 26) * 100) + '%';
   }
 
-  function showFailure(message) {
+  function showFailure(message, suggestions) {
     failMsg.textContent = message;
     failBox.hidden = false;
     fill.style.width = '0%';
@@ -122,6 +128,33 @@ window.addEventListener('DOMContentLoaded', function () {
     var note = document.getElementById('coldQueryNote');
     if (note) note.hidden = true;
     if (ticker) ticker.say('Could not complete this research');
+
+    // A dead end is the one failure this product cannot afford, because the
+    // whole point is that it knows things. When live search is down, offer the
+    // cached cases that overlap the request so the user leaves with something
+    // real rather than an error.
+    var box = document.getElementById('failureSuggestions');
+    if (box) {
+      var list = (suggestions || []).filter(function (s) { return s && s.href; });
+      if (!list.length) { box.hidden = true; return; }
+      box.hidden = false;
+      box.innerHTML = '';
+      var h = document.createElement('p');
+      h.className = 'fail__suggest-head';
+      h.textContent = 'We could not research that, but here is what we do know:';
+      box.appendChild(h);
+      var ul = document.createElement('ul');
+      ul.className = 'fail__suggest-list';
+      list.forEach(function (s) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = s.href;
+        a.textContent = s.label;
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
   }
 
   function loadResult() {
@@ -195,7 +228,8 @@ window.addEventListener('DOMContentLoaded', function () {
         setElapsed((Date.now() - started) / 1000);
         showFailure(
           (err && err.message) ||
-          'We could not complete this research right now. Please try again.'
+          'We could not complete this research right now. Please try again.',
+          (err && err.suggestions) || null
         );
       });
   }

@@ -56,10 +56,15 @@ MAX_PAGE_CHARS = 6000      # per page, so one long page cannot crowd out the res
 BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
              "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 
-# Seconds to wait before retrying a throttled direct search. DuckDuckGo's block
-# is usually short, and a user already waiting 15-40s for an answer will wait a
-# few more seconds rather than be shown an error.
-DIRECT_SEARCH_RETRIES = (0, 8, 20)
+# Seconds to wait before retrying a throttled direct search.
+#
+# A 202/anomaly/captcha response from DuckDuckGo is a *hard* block, not a
+# transient throttle: it has been observed lasting for hours from a single IP.
+# Retrying it three times over 28 seconds does not clear it — it just makes the
+# user stare at a spinner for half a minute before the same failure. So a
+# detected block fails fast, and only a bare 429 with no challenge body (which
+# can be a momentary rate limit) gets one short retry.
+DIRECT_SEARCH_RETRIES = (0, 5)
 
 # Domains that are never a useful source for this domain, and which would
 # otherwise dominate a generic query with boilerplate or previews.
@@ -333,12 +338,11 @@ def _direct_search(transaction_type, bank, residency_phrase, state, on_stage):
     try:
         hits = _results_for(query, bank)
     except _RateLimited as exc:
-        # Not a hard failure — fall through to model-native web access, which is
-        # a genuinely different provider. Aborting the whole pipeline here would
-        # turn a throttle into a dead end.
+        # A throttle is not a result. Let the caller decide whether a short
+        # retry or the model-backed fallback comes next.
         if on_stage:
             on_stage("Direct search throttled", "switching provider")
-        return None
+        raise
     if not hits:
         return None
 
@@ -511,10 +515,9 @@ def search(transaction_type, bank="", residency_phrase="", state="",
 
     # 1. Direct search + page fetch. No key, real page text, exact citations.
     if os.environ.get('KAAGAZ_DISABLE_DIRECT_SEARCH', '').lower() not in ('1', 'true', 'yes'):
-        # DuckDuckGo throttles hard, and a throttled query is usually a
-        # temporary condition rather than a hard block. The user is already
-        # waiting 15-40s for an answer, so a couple of backed-off retries are
-        # worth far more than failing fast and showing an error.
+        # DuckDuckGo throttles hard. A detected block usually persists longer than
+        # a cold-research wait, so allow only one short retry before falling
+        # through to the genuinely different model-backed provider.
         for attempt in range(1, len(DIRECT_SEARCH_RETRIES) + 1):
             try:
                 direct = _direct_search(transaction_type, bank,

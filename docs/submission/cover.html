@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Kaagaz — cover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Kaagaz submission cover — 16:9, rendered to PNG at 2x.
+     Tokens are the app's, so the cover and the product are one brand. */
+  :root {
+    --paper: #FCF7ED;
+    --card:  #FFFCF5;
+    --rule:  #E7DAC2;
+    --ink:   #23262B;
+    --ink-2: #555C66;
+    --ink-3: #636A73;
+    --indigo-deep: #162C49;
+    --indigo: #1E3A5F;
+    --vermillion: #A6382A;
+    --forest: #2E5D43;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans:  'Inter', system-ui, -apple-system, sans-serif;
+    --mono:  'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    --sheen: rgba(255,255,255,0.94);
+    --shade: rgba(122,96,58,0.16);
+    --shade-soft: rgba(122,96,58,0.09);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { width: 1600px; height: 900px; overflow: hidden; }
+
+  .cover {
+    position: relative;
+    width: 1600px;
+    height: 900px;
+    padding: 76px 84px;
+    display: grid;
+    grid-template-columns: 0.94fr 1.06fr;
+    gap: 60px;
+    align-items: center;
+    color: #fff;
+    background: var(--indigo-deep);
+  }
+
+  /* The only background on the field is this flat solid. Everything that reads
+     as depth is a 1px hairline, a solid tint, or a shadow. */
+  .cover::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 8px;
+    background: var(--rust);
+  }
+  .left { position: relative; z-index: 1; display: grid; gap: 26px; align-content: start; }
+
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .brand__name { font: 600 40px/44px var(--serif); letter-spacing: -0.015em; }
+
+  .kicker {
+    font: 600 15px/20px var(--sans); letter-spacing: 0.20em;
+    text-transform: uppercase; color: #F0A99E; margin: 0;
+  }
+
+  h1 {
+    font: 600 76px/84px var(--serif); letter-spacing: -0.024em;
+    margin: 0; max-width: 15ch; text-wrap: balance;
+  }
+  .lede {
+    font: 400 22px/33px var(--sans); color: rgba(255,255,255,0.80);
+    margin: 0; max-width: 46ch;
+  }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+  .stat {
+    display: grid; gap: 2px; padding: 12px 16px; min-width: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.09);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.20);
+  }
+  .stat b { font: 600 27px/31px var(--serif); color: #fff; }
+  .stat span {
+    font: 500 10.5px/14px var(--sans); color: rgba(255,255,255,0.72);
+    letter-spacing: 0.10em; text-transform: uppercase; white-space: nowrap;
+  }
+
+  .foot {
+    position: absolute; left: 84px; right: 84px; bottom: 44px; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    font: 500 15px/20px var(--mono); color: rgba(255,255,255,0.55);
+  }
+
+  /* Product shot, tilted for depth like a card on a desk. */
+  .right { position: relative; z-index: 1; display: grid; place-items: center; }
+  .device {
+    width: 100%;
+    border-radius: 22px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.24);
+    box-shadow: 0 40px 90px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.28);
+    transform: perspective(1600px) rotateY(-9deg) rotateX(3deg) rotateZ(-1.2deg);
+  }
+  .device__bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 12px 16px;
+    background: #24406B;
+  }
+  .device__bar i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.42); }
+  .device__bar em {
+    margin-left: 10px; font: 500 12px/16px var(--mono); font-style: normal;
+    color: rgba(255,255,255,0.88);
+  }
+  /* Cropped to the result head, so the frame ends on a clean edge instead of
+     slicing through the app's own sticky tally bar. */
+  .device img {
+    display: block;
+    width: 100%;
+    height: 458px;
+    object-fit: cover;
+    /* 1280px source scaled into a ~700px frame: 432/700 of the height, which
+       lands on the gap between the rate cards and the next block, so the crop
+       closes on a clean margin instead of slicing through a card or through
+       the app's own sticky tally bar. */
+    object-position: top center;
+  }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="left">
+      <div class="brand">
+        <svg width="62" height="62" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="cp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3A5F92"/><stop offset="1" stop-color="#22406A"/>
+            </linearGradient>
+          </defs>
+          <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="url(#cp)" stroke="rgba(255,255,255,0.34)"/>
+          <path d="M8 6h10l5 5v15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#FFFCF5"/>
+          <path d="M18 6l5 5h-5V6z" fill="#E4D7BE"/>
+          <path d="M10 15.5h7" stroke="#AEB7C2" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="21" cy="21.5" r="7" fill="#3FA772"/>
+          <path d="M17.6 21.6l2.4 2.4 4.4-4.7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand__name">Kaagaz</span>
+      </div>
+
+      <p class="kicker">IBM Bob 2.0 Hackathon &middot; lablab.ai</p>
+
+      <h1>Bank paperwork, researched live and cited line by line.</h1>
+
+      <p class="lede">
+        A research agent for Indian banking documents. You describe the
+        transaction; Kaagaz searches the live web, reads the sources, and hands
+        back one ordered checklist &mdash; with the regulator that imposed each
+        item, and the exact research record behind every figure.
+      </p>
+
+      <div class="stats">
+        <div class="stat"><b>14</b><span>Pre-researched</span></div>
+        <div class="stat"><b>32</b><span>Cited sources</span></div>
+        <div class="stat"><b>192</b><span>Python tests</span></div>
+        <div class="stat"><b>21/21</b><span>Responsive gate</span></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="device">
+        <div class="device__bar"><i></i><i></i><i></i><em>kaagaz &mdash; ask anything</em></div>
+        <img src="shots/result-top.png" alt="A Kaagaz checklist result with the progress board, interest rate band and regulator attribution" />
+      </div>
+    </div>
+  </div>
+</body>
+</html>

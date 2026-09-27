@@ -438,6 +438,45 @@ class TestAgent(unittest.TestCase):
         self.assertNotIn("Traceback", ctx.exception.message)
         self.assertNotIn("SearchError", ctx.exception.message)
 
+    def test_search_outage_suggests_overlapping_cached_cases(self):
+        import app.research.agent as agent_mod
+        from app.research.search import SearchError
+
+        for tx in ("Zebra loan", "Alpha loan"):
+            cache_mod.store(
+                self.app,
+                cache_mod.make_cache_key(tx, "Test Bank", "resident", ""),
+                transaction_type=tx, bank="Test Bank",
+                residency="resident", state="",
+                answer={"summary": "s", "items": [], "sources": []},
+                source_urls=[], research_query="q", search_query="q",
+                ttl_days=7, is_seed=True,
+            )
+
+        def fail(*a, **kw):
+            raise SearchError("provider is down")
+
+        original = agent_mod.search
+        agent_mod.search = fail
+        try:
+            with self.assertRaises(agent.ResearchFailed) as ctx:
+                agent.answer(self.app, {
+                    "transaction_type": "Something unheard of",
+                    "bank": "Test Bank",
+                    "residency": "resident",
+                })
+        finally:
+            agent_mod.search = original
+
+        suggestions = ctx.exception.suggestions
+        self.assertEqual(
+            [s["transaction_type"] for s in suggestions],
+            ["Alpha loan", "Zebra loan"],
+        )
+        self.assertTrue(suggestions[0]["href"].startswith("/checklist?"))
+        self.assertIn("transaction_type=Alpha%20loan", suggestions[0]["href"])
+        self.assertIn("Test Bank", suggestions[0]["label"])
+
     def test_synthesis_failure_degrades_to_sourced_prose_not_a_blank(self):
         import app.research.agent as agent_mod
 
@@ -1067,6 +1106,11 @@ class TestDeployment(unittest.TestCase):
             self.assertNotIn('SearchError', body['error'])
             self.assertNotIn('OpenRouter', body['error'])
             self.assertNotIn('HTTP', body['error'])
+            self.assertIn('suggestions', body)
+            self.assertIsInstance(body['suggestions'], list)
+            for suggestion in body['suggestions']:
+                self.assertTrue(suggestion['href'].startswith('/checklist?'))
+                self.assertTrue(suggestion['label'])
         finally:
             am.search = saved_search
             if saved is not None:
@@ -1090,20 +1134,59 @@ class TestDesignSystem(unittest.TestCase):
                      '--s4: 32px', '--s5: 48px', '--s6: 64px'):
             self.assertIn(step, self.css)
 
-    def test_no_legacy_gradient_decoration(self):
+    def test_gradients_stay_off_the_page_ground(self):
+        """Skeuomorphic faces are allowed; a colour wash over the page is not.
+
+        The tactile layer puts a soft vertical gradient on every raised
+        surface, which is what makes them read as objects. The page ground is
+        different: it carries the paper grain, and a gradient there turns the
+        whole page into a wash and kills the grain. So the guard moved from
+        "no gradients anywhere" — which the new design legitimately breaks —
+        to "no gradient on the ground itself".
+        """
         low = self.css.lower()
-        # One linear-gradient remains, used to rule the board like a ledger
-        # card. It is a repeating 1px rule, not a colour wash.
-        gradient_uses = low.count('linear-gradient')
-        self.assertLessEqual(gradient_uses, 1)
-        for banned in ('#7f5af0', '#8b5cf6', '#6c5ce7', '#a855f7',
-                       'radial-gradient(circle at 30% 30%', 'blur(60px)'):
+        for selector in ('body {', 'html {'):
+            start = low.find(selector)
+            self.assertNotEqual(start, -1, selector)
+            block = low[start:low.find('}', start)]
+            self.assertNotIn('linear-gradient', block,
+                             '%s must stay flat so the paper grain reads' % selector)
+        # The old guard also banned a specific washed-out palette. That still
+        # holds: these colours never appear in this design.
+        for banned in ('#7f5af0', '#8b5cf6', '#6c5ce7', '#a855f7', 'blur(60px)'):
             self.assertNotIn(banned, low)
 
-    def test_three_radii_only(self):
+    def test_five_radii_are_declared_and_the_largest_is_generous(self):
+        """Radii grew from three to five when the surfaces went bubbly.
+
+        Still a closed set — an ad-hoc `border-radius: 7px` is exactly how a
+        design system quietly stops being one — and still bounded at the top,
+        because an unbounded radius is how a card turns into a lozenge.
+        """
         import re
         declared = set(re.findall(r'--r-[\w-]+:\s*([\d.]+px|999px)', self.css))
-        self.assertEqual(len(declared), 4, "sm/md/lg/pill only: %s" % declared)
+        self.assertEqual(len(declared), 5,
+                         "sm/md/lg/xl/pill only: %s" % declared)
+        # The pill is 999px by definition and is not a card edge, so it is
+        # excluded from the corner-radius bound below.
+        sizes = [float(v[:-2]) for v in declared
+                 if v.endswith('px') and float(v[:-2]) < 999]
+        self.assertGreaterEqual(max(sizes), 24,
+                                "the largest radius must stay visibly rounded")
+        self.assertLessEqual(max(sizes), 40,
+                             "a radius past 40px stops reading as a card edge")
+
+    def test_depth_is_warm_not_neutral_black(self):
+        """Inset shadows carry a warm hue; neutral black reads as grey plastic."""
+        self.assertIn('--well:', self.css)
+        self.assertIn('--shade:', self.css)
+        # The inset wells must not be pure black.
+        import re
+        wells = re.findall(r'--well[\w-]*:\s*([^;]+);', self.css)
+        self.assertTrue(wells)
+        for value in wells:
+            self.assertNotIn('0, 0, 0', value,
+                             'inset shadows must be warm: %s' % value)
 
     def test_every_focusable_control_has_a_visible_focus_style(self):
         self.assertIn(':focus-visible', self.css)
@@ -1120,7 +1203,7 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_print_styles_exist_and_hide_chrome(self):
         self.assertIn('@media print', self.css)
-        for hide in ('.masthead', '.colophon', '.tally', '.no-print'):
+        for hide in ('.topbar', '.colophon', '.tally', '.no-print'):
             self.assertIn(hide, self.css)
 
     def test_three_breakpoints_are_covered(self):
@@ -1157,6 +1240,79 @@ class TestDesignSystem(unittest.TestCase):
             self.assertIn(macro, ico)
         # All three must be hidden from assistive tech — they carry no meaning.
         self.assertEqual(ico.count('aria-hidden="true"') >= 3, True)
+
+    def test_visual_layers_stay_separate(self):
+        """Icon set, characters, and brand mark are three layers, not one.
+
+        The icon set is asserted elsewhere to be fully outlined at a single
+        stroke weight, because a regulatory glyph has to be unambiguous at
+        16px. The characters and the mark are filled and shaded. Folding any of
+        them into _icons.html would break that guarantee, and mixing the three
+        styles on one screen is what makes an interface read as assembled
+        rather than designed — so the separation is asserted, not just
+        documented in a comment.
+        """
+        tpl = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'app', 'templates')
+        with open(os.path.join(tpl, '_icons.html')) as fh:
+            ico = fh.read()
+        functional = ico.split('macro wax_seal')[0]
+
+        for name in ('_bubble.html', '_logo.html'):
+            self.assertTrue(os.path.exists(os.path.join(tpl, name)), name)
+        # Neither the characters nor the mark may leak into the icon set.
+        self.assertNotIn('bub', functional)
+        self.assertNotIn('macro logo_mark', functional)
+        # And the icon set must not be referenced for the brand mark.
+        base = os.path.join(tpl, 'base.html')
+        with open(base) as fh:
+            base_html = fh.read()
+        self.assertIn('_logo.html', base_html)
+        self.assertIn('logo.logo_mark(', base_html)
+
+    def test_favicon_matches_the_brand_mark(self):
+        """The tab icon and the masthead mark are the same drawing.
+
+        Two hand-maintained copies of one mark drift apart the moment either is
+        edited. This pins the geometry that identifies it: the sheet path, the
+        folded corner, the single heavy rule, and the check.
+        """
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, 'app', 'static', 'favicon.svg')) as fh:
+            fav = fh.read()
+        with open(os.path.join(root, 'app', 'templates', '_logo.html')) as fh:
+            logo = fh.read()
+
+        # The same four primitives, in both files.
+        sheet = 'M8 6h10l5 5v15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z'
+        fold = 'M18 6l5 5h-5V6z'
+        rule = 'M10 15.5h7'
+        check = 'M17.6 21.6l2.4 2.4 4.4-4.7'
+        for path in (sheet, fold, rule, check):
+            self.assertIn(path, fav, path)
+            self.assertIn(path, logo, path)
+        # One rule, not two — the two-rule version was mush at 30px.
+        self.assertEqual(logo.count('M10 15.5h7'), 1)
+        self.assertEqual(logo.count('M10 14.5h9'), 0)
+
+    def test_characters_share_one_face_and_one_grid(self):
+        """Every bubble character is drawn the same way.
+
+        A cast that drifts — different eyes, different smiles, different
+        viewBoxes — reads as five unrelated mascots rather than one family.
+        """
+        with open(os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), 'app', 'templates', '_bubble.html')) as fh:
+            bub = fh.read()
+        self.assertEqual(bub.count('viewBox="0 0 200 200"'), 5)
+        # The face and the blush are macros, so they are authored once.
+        self.assertEqual(bub.count('{% macro _face('), 1)
+        self.assertEqual(bub.count('{% macro _blush('), 1)
+        # Every character calls the shared face exactly once.
+        self.assertEqual(bub.count('{{ _face('), 5)
+        self.assertEqual(bub.count('{{ _blush('), 5)
+        # Filled shapes, like the brand mark — the opposite of the icon set.
+        self.assertIn('fill-opacity="0.30"', bub)
 
 
 if __name__ == '__main__':
@@ -1426,6 +1582,33 @@ class TestDirectSearch(unittest.TestCase):
         from app.research.search import _fetch_page
         # Reserved TLD, guaranteed not to resolve.
         self.assertIsNone(_fetch_page({"url": "http://nope.invalid/x", "title": "t"}))
+
+    def test_direct_search_throttle_uses_the_bounded_retry_then_falls_through(self):
+        """A blocked direct search must reach the configured retry path."""
+        import app.research.search as sm
+        from app.research.search import _RateLimited, SearchError
+
+        calls = []
+
+        def blocked(*a, **kw):
+            calls.append(1)
+            raise _RateLimited("blocked")
+
+        original_results, original_retries, original_models = (
+            sm._results_for, sm.DIRECT_SEARCH_RETRIES, sm.SEARCH_MODELS)
+        sm._results_for = blocked
+        sm.DIRECT_SEARCH_RETRIES = (0, 0)
+        sm.SEARCH_MODELS = []
+        try:
+            with self.assertRaises(SearchError) as ctx:
+                sm.search('home loan', bank='X Bank',
+                          residency_phrase='an applicant', state='')
+            self.assertIn('throttled', str(ctx.exception))
+        finally:
+            sm._results_for = original_results
+            sm.DIRECT_SEARCH_RETRIES = original_retries
+            sm.SEARCH_MODELS = original_models
+        self.assertEqual(len(calls), len((0, 0)))
 
     def test_search_falls_through_when_direct_is_throttled(self):
         """A throttle must not abort the pipeline — there is a second backend.

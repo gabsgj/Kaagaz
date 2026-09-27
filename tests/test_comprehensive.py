@@ -94,6 +94,13 @@ class TestAskPage:
         assert 'data-tx="home_loan"' not in html
         assert 'data-state="kerala"' not in html
 
+    def test_research_form_submits_to_checklist(self, client):
+        """The submit button must open a result, not reload the landing page."""
+        html = client.get('/').data.decode()
+        assert 'id="askForm"' in html
+        assert 'action="/checklist"' in html
+        assert 'method="get"' in html
+
     def test_offers_every_residency_state(self, client):
         html = client.get('/').data.decode()
         for label in ('Resident Indian', 'Non-Resident Indian (NRI)',
@@ -116,7 +123,10 @@ class TestAskPage:
             assert junk not in html, junk
 
     def test_disclaimer_present(self, client):
-        assert 'not legal or financial advice' in client.get('/').data.decode()
+        # The footer carries the disclaimer on every page, so this is checked
+        # case-insensitively against the phrasing the footer actually uses.
+        html = client.get('/').data.decode()
+        assert 'Not financial or legal advice' in html
 
 
 # ══════════════════════════════════════════════════════════════════════

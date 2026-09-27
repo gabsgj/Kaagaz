@@ -77,10 +77,11 @@ def finish(job, result):
         job["touched_at"] = time.time()
 
 
-def fail(job, message, kind="search_unavailable", retryable=True):
+def fail(job, message, kind="search_unavailable", retryable=True, suggestions=None):
     with _lock:
         job["status"] = "error"
-        job["error"] = {"message": message, "kind": kind, "retryable": retryable}
+        job["error"] = {"message": message, "kind": kind, "retryable": retryable,
+                        "suggestions": suggestions or []}
         job["touched_at"] = time.time()
 
 

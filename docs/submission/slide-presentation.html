@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Kaagaz — IBM Bob 2.0 Hackathon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ───────────────────────────────────────────────────────────────
+     Kaagaz slide deck. 16:9 at 1280x720 CSS px, which is exactly
+     PowerPoint's 13.333in x 7.5in at 96dpi — so what you see here
+     is what prints, one CSS pixel to one PDF point.
+
+     Design system is lifted from the app so the deck and the product
+     are visibly the same thing: paper cream ground, indigo, one
+     vermillion accent, Fraunces headings, Inter body, mono for
+     labels and figures, torn-paper edges, wax seal, ink stamp.
+     ─────────────────────────────────────────────────────────────── */
+  @page { size: 1280px 720px; margin: 0; }
+
+  :root {
+    /* Kept in step with app/static/css/main.css. If the app's palette moves,
+       these move with it — the deck is part of the same product, and a
+       submission that shows two different brands is worse than either. */
+    --paper:      #FCF7ED;
+    --paper-deep: #F3EADA;
+    --card:       #FFFCF5;
+    --card-hi:    #FFFFFF;
+    --rule:       #E7DAC2;
+    --rule-soft:  #F1E9D8;
+    --ink:        #23262B;
+    --ink-2:      #555C66;
+    --ink-3:      #636A73;
+    --indigo:     #1E3A5F;
+    --indigo-deep:#162C49;
+    --indigo-tint:#EBF0F6;
+    --vermillion: #A6382A;
+    --verm-tint:  #F9EDE9;
+    --forest:     #2E5D43;
+    --forest-tint:#E9F1EB;
+    --gold:       #8A6A1F;
+    --gold-tint:  #F7F0DD;
+
+    --serif: 'Fraunces', Georgia, serif;
+    --sans:  'Inter', system-ui, -apple-system, sans-serif;
+    --mono:  'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+    /* Warm depth, as in the app. */
+    --sheen:  rgba(255, 255, 255, 0.94);
+    --shade:  rgba(122, 96, 58, 0.16);
+    --shade-soft: rgba(122, 96, 58, 0.09);
+    --lift-1: 0 1px 2px var(--shade-soft), 0 2px 6px var(--shade-soft), inset 0 1px 0 var(--sheen);
+    --lift-2: 0 2px 4px var(--shade-soft), 0 8px 20px var(--shade), inset 0 1px 0 var(--sheen);
+    --face-card: linear-gradient(180deg, #FFFDF8 0%, #FCF6E9 100%);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #3A3F46;
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(35,38,43,0.030) 0.5px, transparent 0),
+      radial-gradient(circle at 2px 3px, rgba(35,38,43,0.018) 0.5px, transparent 0);
+    background-size: 24px 24px, 17px 17px;
+    padding: 54px 68px 56px;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  /* Torn deckle edge, reused verbatim from the app stylesheet. */
+  .torn-top, .torn-bottom {
+    position: absolute; left: 0; right: 0; height: 24px; overflow: hidden;
+  }
+  .torn-top { top: 0; background: var(--indigo-deep); }
+  .torn-top::after {
+    content: ""; position: absolute; inset-inline: 0; top: 0; height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='24' viewBox='0 0 160 24'%3E%3Cpath d='M0 24L0 15L0 12.8L7 14.9Q11 8.6 15 16.1L15 4.9L20 16.9Q25 4.4 30 13.5L30 9.1L40 14L40 11.7L46 14.9L46 12.1L54 13.2Q58.5 9.4 63 15.8Q67 5.7 71 14Q73.5 10.3 76 14.1L76 9.5L82 14.2Q86 11 90 13.6L90 9.5L100 13.4L100 9.9L105 17Q107.5 7.3 110 14.8Q114 9.5 118 13.3Q123 7.5 128 16.7Q131.5 10.7 135 14.9L135 4.1L141 13.4Q143.5 6.3 146 15.3Q150 9.6 154 15L160 15L160 24Z' fill='%23FBF7EE'/%3E%3C/svg%3E");
+    background-repeat: repeat-x; background-size: 160px 24px;
+  }
+  .torn-bottom { bottom: 0; background: none; }
+  .torn-bottom::after {
+    content: ""; position: absolute; inset-inline: 0; top: 0; height: 24px;
+    transform: scaleY(-1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='24' viewBox='0 0 160 24'%3E%3Cpath d='M0 24L0 15L0 12.8L7 14.9Q11 8.6 15 16.1L15 4.9L20 16.9Q25 4.4 30 13.5L30 9.1L40 14L40 11.7L46 14.9L46 12.1L54 13.2Q58.5 9.4 63 15.8Q67 5.7 71 14Q73.5 10.3 76 14.1L76 9.5L82 14.2Q86 11 90 13.6L90 9.5L100 13.4L100 9.9L105 17Q107.5 7.3 110 14.8Q114 9.5 118 13.3Q123 7.5 128 16.7Q131.5 10.7 135 14.9L135 4.1L141 13.4Q143.5 6.3 146 15.3Q150 9.6 154 15L160 15L160 24Z' fill='%23FBF7EE'/%3E%3C/svg%3E");
+    background-repeat: repeat-x; background-size: 160px 24px;
+  }
+
+  /* Ink section ─────────────────────────────────────────────────── */
+  .ink {
+    background-color: var(--indigo-deep);
+    background-image:
+      radial-gradient(circle at 88% 12%, rgba(255,255,255,0.07), transparent 320px),
+      radial-gradient(circle at 6% 92%, rgba(166,56,42,0.16), transparent 380px);
+    color: #FFFFFF;
+  }
+  .ink h1, .ink h2, .ink h3 { color: #FFFFFF; }
+  .ink .eyebrow { color: #F0A99E; }
+  .ink p, .ink li { color: rgba(255,255,255,0.87); }
+  .ink .lede { color: rgba(255,255,255,0.80); }
+
+  /* Type ────────────────────────────────────────────────────────── */
+  .eyebrow {
+    font: 600 12px/16px var(--sans);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--vermillion); margin: 0 0 14px;
+  }
+  h1 { font: 600 58px/64px var(--serif); letter-spacing: -0.022em; color: var(--indigo); margin: 0; }
+  h2 { font: 600 40px/46px var(--serif); letter-spacing: -0.018em; color: var(--indigo); margin: 0; }
+  h3 { font: 600 19px/26px var(--sans); color: var(--indigo); margin: 0; }
+  .lede { font: 400 19px/29px var(--sans); color: var(--ink-2); margin: 16px 0 0; max-width: 62ch; }
+  p  { font: 400 16px/25px var(--sans); color: var(--ink-2); margin: 0; }
+  .mono { font-family: var(--mono); }
+  .tight { font: 600 11px/14px var(--sans); letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
+  .rule { height: 1px; background: var(--rule); border: 0; margin: 20px 0; }
+
+  /* Header / footer chrome ──────────────────────────────────────── */
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+  .foot {
+    position: absolute; left: 68px; right: 68px; bottom: 26px;
+    display: flex; align-items: center; justify-content: space-between;
+    font: 500 11px/16px var(--mono); color: var(--ink-3);
+  }
+  .ink .foot { color: rgba(255,255,255,0.55); }
+  .foot .mark { display: flex; align-items: center; gap: 7px; }
+  .foot svg { color: var(--vermillion); }
+
+  /* Layout helpers ──────────────────────────────────────────────── */
+  .cols { display: grid; gap: 40px; align-items: start; }
+  .c-2 { grid-template-columns: 1fr 1fr; }
+  .c-3 { grid-template-columns: repeat(3, 1fr); }
+  .c-4 { grid-template-columns: repeat(4, 1fr); }
+  .grow { flex: 1 1 auto; min-height: 0; }
+
+  ul.bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 15px; }
+  ul.bullets li { position: relative; padding-left: 32px; font: 400 16px/25px var(--sans); color: var(--ink-2); }
+  ul.bullets li strong { color: var(--ink); font-weight: 600; }
+  ul.bullets li svg { position: absolute; left: 0; top: 4px; }
+  .bullets--rbi li svg { color: var(--indigo); }
+  .bullets--vermillion li svg { color: var(--vermillion); }
+  .bullets--forest li svg { color: var(--forest); }
+
+  /* Cards ───────────────────────────────────────────────────────── */
+  .card {
+    background: var(--card); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 20px 22px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .card svg { color: var(--vermillion); }
+  .card p { font-size: 14px; line-height: 22px; }
+  .ink .card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.20); }
+
+  .stat { display: grid; gap: 4px; }
+  .stat b { font: 700 46px/48px var(--serif); color: var(--indigo); font-weight: 600; }
+  .ink .stat b { color: #FFFFFF; }
+  .stat span { font: 400 13px/19px var(--sans); color: var(--ink-2); }
+  .ink .stat span { color: rgba(255,255,255,0.72); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--card);
+    font: 500 12px/16px var(--sans); color: var(--ink-2); white-space: nowrap;
+  }
+  .pill--forest { border-color: #BFD8C8; background: var(--forest-tint); color: #1F4230; }
+  .pill--verm   { border-color: #E7C7C0; background: var(--verm-tint);   color: #7A2A1F; }
+  .pill--gold   { border-color: #E3D3A8; background: var(--gold-tint);   color: #5F4A14; }
+  .pill--indigo { border-color: #C3D0E0; background: var(--indigo-tint); color: var(--indigo-deep); }
+
+  /* Device frame for screenshots ────────────────────────────────── */
+  .shot { border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 26px rgba(35,38,43,0.13); background: #fff; }
+  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+  /* Evidence crops are shown whole — a clipped citation list would be exactly
+     the kind of dishonest cropping this deck is arguing against. */
+  .shot--fit img { height: auto; object-fit: contain; object-position: center; }
+  .shot__bar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: var(--indigo); }
+  .shot__bar i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.45); }
+  .shot__bar em { margin-left: 8px; font: 500 11px/14px var(--mono); font-style: normal; color: rgba(255,255,255,0.85); }
+  .caption { font: 400 12px/17px var(--sans); color: var(--ink-3); margin-top: 9px; }
+
+  /* Pipeline diagram ────────────────────────────────────────────── */
+  .pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .pipe__node {
+    position: relative; background: var(--card); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 14px 13px 15px; display: grid; gap: 7px; align-content: start;
+  }
+  .pipe__node::after {
+    content: ""; position: absolute; top: 26px; right: -7px; width: 4px; height: 4px;
+    border-top: 1.5px solid var(--ink-3); border-right: 1.5px solid var(--ink-3);
+    transform: rotate(45deg);
+  }
+  .pipe__node:last-child::after { display: none; }
+  .pipe__node b { font: 600 12px/15px var(--mono); color: var(--vermillion); letter-spacing: 0.05em; }
+  .pipe__node h4 { font: 600 14px/19px var(--sans); color: var(--indigo); margin: 0; }
+  .pipe__node p { font: 400 12px/17px var(--sans); color: var(--ink-2); }
+  .pipe__node--store { background: var(--indigo); border-color: var(--indigo); }
+  .pipe__node--store b { color: #F0A99E; }
+  .pipe__node--store h4 { color: #FFFFFF; }
+  .pipe__node--store p { color: rgba(255,255,255,0.80); }
+  .pipe__node--store::after { border-color: rgba(255,255,255,0.6); }
+
+  /* Chain diagram ───────────────────────────────────────────────── */
+  .chain { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .chain__step {
+    display: grid; gap: 3px; padding: 12px 16px; border-radius: 8px;
+    border: 1px solid var(--rule); background: var(--card); min-width: 168px;
+  }
+  .chain__step b { font: 600 15px/20px var(--sans); color: var(--indigo); }
+  .chain__step span { font: 500 11px/15px var(--mono); color: var(--ink-3); }
+  .chain__step--live { border-color: #BFD8C8; background: var(--forest-tint); }
+  .chain__step--live b { color: #1F4230; }
+  .chain__arrow { color: var(--ink-3); flex: none; }
+  .chain__note { font: 500 12px/17px var(--mono); color: var(--ink-2); }
+
+  /* Quote / callout ─────────────────────────────────────────────── */
+  .callout {
+    border-left: 3px solid var(--vermillion); background: var(--verm-tint);
+    border-radius: 0 8px 8px 0; padding: 16px 20px;
+  }
+  .callout p { font: 400 15px/24px var(--sans); color: #7A2A1F; }
+  .callout b { font-weight: 600; }
+
+  /* Icon helpers */
+  .ico { flex: none; }
+  @media print { body { background: #fff; } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ 1. COVER ══════════════════ -->
+<section class="slide ink">
+  <div class="torn-bottom" style="bottom:-1px"></div>
+  <div style="display:grid;grid-template-columns:1.02fr 0.98fr;gap:48px;align-items:center;flex:1">
+    <div>
+      <p class="eyebrow">IBM Bob 2.0 Hackathon &middot; lablab.ai</p>
+      <h1>Bank paperwork,<br>researched live<br>and cited line by line.</h1>
+      <p class="lede">
+        Kaagaz turns any Indian banking-document question into an ordered, costed,
+        regulator-aware checklist &mdash; with the sources it actually read and the
+        exact research record behind every figure.
+      </p>
+      <div style="display:flex;gap:10px;margin-top:28px;flex-wrap:wrap">
+        <span class="pill" style="background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.24);color:#fff">14 pre-researched answers</span>
+        <span class="pill" style="background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.24);color:#fff">32 cited sources</span>
+        <span class="pill" style="background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.24);color:#fff">188 tests &middot; 4 browser gates</span>
+      </div>
+    </div>
+    <div class="shot" style="border-color:rgba(255,255,255,0.24);box-shadow:0 18px 44px rgba(0,0,0,0.36)">
+      <div class="shot__bar"><i></i><i></i><i></i><em>kaagaz &mdash; ask anything</em></div>
+      <img src="shots/hero.png" alt="Kaagaz landing page" style="height:404px" />
+    </div>
+  </div>
+  <div class="foot" style="color:rgba(255,255,255,0.55)">
+    <span class="mark">Built with IBM Bob 2.0</span>
+    <span>01</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 2. PROBLEM ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">The problem</p>
+      <h2>Paperwork fails at the counter.</h2>
+    </div>
+    <p class="tight" style="text-align:right">India &middot; banking &amp; financial<br />transactions</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.06fr 0.94fr;gap:34px;flex:1;min-height:0">
+    <div style="display:grid;gap:12px;align-content:start">
+      <div class="card" style="flex-direction:row;gap:14px;align-items:flex-start;padding:16px 18px">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.2V12l3.2 2"/></svg>
+        <div style="display:grid;gap:4px">
+          <h3>Nobody finds out early</h3>
+          <p style="font-size:14px">The missing affidavit, the attestation not done abroad, the stamp denomination nobody mentioned &mdash; all of it surfaces during the appointment.</p>
+        </div>
+      </div>
+      <div class="card" style="flex-direction:row;gap:14px;align-items:flex-start;padding:16px 18px">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px"><path d="M4 4.6h6a2.4 2.4 0 012.4 2.4v12a1.8 1.8 0 00-1.8-1.8H4z"/><path d="M20 4.6h-6a2.4 2.4 0 00-2.4 2.4v12a1.8 1.8 0 011.8-1.8H20z"/></svg>
+        <div style="display:grid;gap:4px">
+          <h3>Scattered across four sources</h3>
+          <p style="font-size:14px">Bank product pages, RBI circulars, state stamp-duty schedules, registrar notices. None of them agrees on a single list.</p>
+        </div>
+      </div>
+      <div class="card" style="flex-direction:row;gap:14px;align-items:flex-start;padding:16px 18px">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px"><path d="M4 20.4h16"/><path d="M6.4 17.4h11.2l-.9-3.6a2 2 0 00-1.9-1.4H9.2a2 2 0 00-1.9 1.4z"/><path d="M9.6 12.4V9.6a2.4 2.4 0 014.8 0v2.8"/></svg>
+        <div style="display:grid;gap:4px">
+          <h3>The regulators get conflated</h3>
+          <p style="font-size:14px">&ldquo;The RBI says you need stamp duty&rdquo; sends someone to entirely the wrong government office &mdash; and it is the most common error in the domain.</p>
+        </div>
+      </div>
+      <div class="card" style="flex-direction:row;gap:14px;align-items:flex-start;padding:16px 18px">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="1.4"/><path d="M2.8 9.8h18.4"/><path d="M6.4 14.4h3.4"/></svg>
+        <div style="display:grid;gap:4px">
+          <h3>No cost, no timeline</h3>
+          <p style="font-size:14px">A list of names is not a plan. What it costs, how many days each step takes, and which one blocks the next is what makes it usable.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:14px;align-content:start">
+      <div class="callout">
+        <p><b>The same question has four different answers.</b> One per residency status &mdash; and more again per state, because stamp duty and registration fees are state law.</p>
+      </div>
+      <div class="callout">
+        <p><b>Ask an NRI for a resident&rsquo;s checklist</b> and you get a list full of documents they do not need &mdash; and no work permit, no attested contract, no overseas statements.</p>
+      </div>
+      <div class="card" style="padding:17px 19px">
+        <span class="tight" style="margin-bottom:2px">What it costs in practice</span>
+        <p style="font-size:14px">Repeat visits, missed appointment slots, and occasionally a missed disbursement deadline. The information existed the whole time &mdash; it was just never in one ordered place.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; the problem</span>
+    <span>02</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 3. WHY A LIST CANNOT ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Why the obvious build fails</p>
+      <h2>A checklist app has a ceiling set by its curator.</h2>
+    </div>
+  </div>
+
+  <div class="cols c-2 grow" style="align-content:start">
+    <div>
+      <p class="tight" style="margin-bottom:12px">The obvious approach</p>
+      <ul class="bullets">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Someone decides which transactions matter and hand-writes the list.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>It covers exactly those cases, and nothing outside them.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>It goes stale the week a bank revises a fee schedule.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Nobody can tell which regulator imposed which line.</span></li>
+      </ul>
+    </div>
+
+    <div>
+      <p class="tight" style="margin-bottom:12px">What Kaagaz does instead</p>
+      <ul class="bullets bullets--forest">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Free-text question. <strong>Unknown banks and products are researched, not rejected.</strong></span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Search the live web, read the pages, <strong>cite only what was opened.</strong></span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Freshness is per entry, with an <strong>as-of date on screen.</strong></span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Regulator attribution is <strong>enforced in code</strong>, not requested in a prompt.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:22px">
+    <p class="tight" style="margin-bottom:11px">Questions a fixed list cannot answer</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding-bottom:20px">
+      <div class="card" style="padding:15px 17px;gap:7px">
+        <span class="mono" style="font-size:12px;color:var(--indigo)">&ldquo;Kisan Credit Card renewal for a Kisan with 2 land records&rdquo;</span>
+        <p style="font-size:13px;line-height:20px">Not one of the four canonical products, and the document set depends on how many land records exist.</p>
+      </div>
+      <div class="card" style="padding:15px 17px;gap:7px">
+        <span class="mono" style="font-size:12px;color:var(--indigo)">&ldquo;Gold loan at a small finance bank, not HDFC&rdquo;</span>
+        <p style="font-size:13px;line-height:20px">A bank nobody curated. It is still researched, ranked by its own name match, and cited from its own pages.</p>
+      </div>
+      <div class="card" style="padding:15px 17px;gap:7px">
+        <span class="mono" style="font-size:12px;color:var(--indigo)">&ldquo;Property registration in Kerala for an NRI buyer&rdquo;</span>
+        <p style="font-size:13px;line-height:20px">State fees <em>and</em> residency rules <em>and</em> an attestation chain, all at once &mdash; the case a single-list product gets wrong most often.</p>
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>The cache is a floor, not a ceiling.</b> 14 answers are pre-warmed so the common cases are instant and the demo survives a bad network. Anything else goes out to live search and is filed into the same record.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; approach</span>
+    <span>03</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 4. THE PRODUCT ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">The answer</p>
+      <h2>Ordered, costed, attributed, cited.</h2>
+    </div>
+    <p class="tight" style="text-align:right">Home loan &middot; HDFC Bank<br />Resident Indian</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.32fr 0.68fr;gap:30px;flex:1;min-height:0">
+    <div class="shot" style="align-self:start">
+      <div class="shot__bar"><i></i><i></i><i></i><em>/checklist &mdash; home loan, HDFC Bank</em></div>
+      <img src="shots/result-top.png" alt="Checklist result with flip board, rate band and regulator note" style="height:428px" />
+    </div>
+    <div style="display:grid;gap:14px;align-content:start">
+      <div class="card">
+        <span class="pill pill--forest" style="align-self:flex-start">Band, never a single rate</span>
+        <p>7.75% &ndash; 13.20% p.a. Pricing depends on credit score, amount and tenure, so one number would be a lie.</p>
+      </div>
+      <div class="card">
+        <span class="pill pill--indigo" style="align-self:flex-start">Who regulates what</span>
+        <p>Every line is labelled <b>RBI</b>, <b>state stamp act</b>, <b>registrar</b> or <b>bank policy</b> &mdash; and the label is not the model&rsquo;s opinion.</p>
+      </div>
+      <div class="card">
+        <span class="pill" style="align-self:flex-start">14 items, each one openable</span>
+        <p>Where to get it, what it costs, how many days, and which earlier step it depends on.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; the answer</span>
+    <span>04</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 5. ARCHITECTURE ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Architecture</p>
+      <h2>Cache first. Research on a miss. File the evidence.</h2>
+    </div>
+  </div>
+
+  <div class="pipe" style="margin-bottom:20px">
+    <div class="pipe__node">
+      <b>01</b><h4>Normalise</h4>
+      <p>Canonicalise bank, state, product, residency. Unknown values pass through untouched.</p>
+    </div>
+    <div class="pipe__node">
+      <b>02</b><h4>Check the record</h4>
+      <p>Fresh entry inside its TTL returns instantly, dated and sourced.</p>
+    </div>
+    <div class="pipe__node">
+      <b>03</b><h4>Search &amp; read</h4>
+      <p>Keyless result list, then fetch and strip the top pages ourselves.</p>
+    </div>
+    <div class="pipe__node">
+      <b>04</b><h4>Generate</h4>
+      <p>Strict JSON over the real page text, through a provider chain.</p>
+    </div>
+    <div class="pipe__node">
+      <b>05</b><h4>Enforce</h4>
+      <p>Correct misattribution, reject unsourced figures, clamp nonsense costs.</p>
+    </div>
+    <div class="pipe__node pipe__node--store">
+      <b>06</b><h4>File</h4>
+      <p>One row: answer, sources, query, timestamp, model, provider.</p>
+    </div>
+  </div>
+
+  <div class="cols c-2 grow" style="align-content:start;margin-top:4px">
+    <div>
+      <p class="tight" style="margin-bottom:11px">Why search and generation are separate</p>
+      <ul class="bullets">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>They are <strong>independent failures</strong> &mdash; a search outage does not disable structuring.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Retrieval grounds the model in <strong>real page text</strong>, not another model&rsquo;s summary.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>We choose which sources get cited, rather than hoping the model does.</span></li>
+      </ul>
+    </div>
+    <div style="display:grid;gap:13px;align-content:start">
+      <p class="tight" style="margin-bottom:-4px">What the user sees while it runs</p>
+      <div class="card" style="padding:15px 18px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="pill pill--indigo">Checking sources</span>
+          <svg width="15" height="9" viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3)"><path d="M1 7h19M14 1l6 6-6 6"/></svg>
+          <span class="pill pill--indigo">Reading pages</span>
+          <svg width="15" height="9" viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-3)"><path d="M1 7h19M14 1l6 6-6 6"/></svg>
+          <span class="pill pill--indigo">Building checklist</span>
+        </div>
+        <p style="font-size:13px">Real stage names from the server, and the source hostnames as each page is actually fetched. Nothing on that board is simulated.</p>
+      </div>
+      <div class="callout" style="padding:13px 17px">
+        <p style="font-size:13px;line-height:20px"><b>A 202 from DuckDuckGo is a block, not an empty result.</b> Detected explicitly, given one short retry, then reported as a throttle &mdash; never rendered as &ldquo;no results&rdquo;.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding-top:20px">
+    <div class="card" style="padding:15px 17px;gap:6px">
+      <span class="tight">Freshness</span>
+      <p style="font-size:13px;line-height:20px">Document lists move slowly, rates move weekly &mdash; so an entry takes the <b>shorter</b> window. Every row stores its own TTL.</p>
+    </div>
+    <div class="card" style="padding:15px 17px;gap:6px">
+      <span class="tight">Degradation order</span>
+      <p style="font-size:13px;line-height:20px">Fresh hit &rarr; stale answer labelled with its age &rarr; live research &rarr; related cached cases. An error is the last resort, never the first.</p>
+    </div>
+    <div class="card" style="padding:15px 17px;gap:6px">
+      <span class="tight">Cold start</span>
+      <p style="font-size:13px;line-height:20px">On a blank database the schema is created and the seed set filed automatically. There is no setup step to forget.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; architecture</span>
+    <span>05</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 6. RESILIENCE ══════════════════ -->
+<section class="slide ink">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Resilience</p>
+      <h2>One registry, three providers, no single point of failure.</h2>
+    </div>
+  </div>
+
+  <div class="chain" style="margin-bottom:20px">
+    <div class="chain__step">
+      <b>OpenRouter</b><span>best structured output</span>
+    </div>
+    <svg class="chain__arrow" width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 7h19M14 1l6 6-6 6"/></svg>
+    <div class="chain__step chain__step--live">
+      <b>Groq</b><span>measured 0.9s, valid JSON</span>
+    </div>
+    <svg class="chain__arrow" width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 7h19M14 1l6 6-6 6"/></svg>
+    <div class="chain__step">
+      <b>NVIDIA NIM</b><span>free tier, slowest</span>
+    </div>
+  </div>
+
+  <div class="cols c-2" style="gap:34px">
+    <ul class="bullets" style="gap:13px">
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">No key is skipped, not called and failed.</strong> An unauthenticated round trip on every request is pure waste.</span></li>
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">Out of credit trips the provider out</strong> for five minutes, so no call opens with a guaranteed 402.</span></li>
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">Only terminal statuses trip it.</strong> A 500 is one bad call, not grounds for abandoning a provider.</span></li>
+    </ul>
+    <ul class="bullets" style="gap:13px">
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">Groq&rsquo;s model list is discovered, not hardcoded</strong> &mdash; verified against the live catalogue.</span></li>
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">Moderation models are excluded.</strong> A guard model answering a JSON request looks like success and returns nonsense.</span></li>
+      <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">Nothing is invented on the way down the chain</strong> &mdash; if every provider fails, the app degrades instead of guessing.</span></li>
+    </ul>
+  </div>
+
+  <div style="margin-top:auto;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding-top:18px">
+    <span class="chain__note" style="color:rgba(255,255,255,0.72);white-space:nowrap">GET /api/research/health</span>
+    <div class="mono" style="font-size:12px;line-height:20px;color:rgba(255,255,255,0.66);background:rgba(0,0,0,0.24);border:1px solid rgba(255,255,255,0.16);border-radius:6px;padding:11px 15px">
+      { "ok": true,<br />
+      &nbsp;&nbsp;"providers": [ { "name": "openrouter", "has_key": true, "tripped": true },<br />
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ "name": "groq", "has_key": true, "tripped": false } ],<br />
+      &nbsp;&nbsp;"has_any_ai_key": true }
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; resilience</span>
+    <span>06</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 7. HONESTY ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Accuracy</p>
+      <h2>It says what it could not confirm.</h2>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.06fr 0.94fr;gap:30px;flex:1;min-height:0">
+    <div style="display:grid;gap:14px;align-content:start">
+      <div class="shot shot--fit">
+        <div class="shot__bar"><i></i><i></i><i></i><em>the app&rsquo;s own disclosure block</em></div>
+        <img src="shots/evidence-honesty.png" alt="The What we could not confirm block listing stamp duty as state levied and the rate as minimum-not-specific" />
+      </div>
+      <div class="shot shot--fit">
+        <div class="shot__bar"><i></i><i></i><i></i><em>sources read for this answer</em></div>
+        <img src="shots/evidence-sources.png" alt="Three numbered sources, each a link to the exact page that was read" />
+      </div>
+      <p class="caption">Both panels are lifted straight from one result page, unmodified.</p>
+    </div>
+    <div style="display:grid;gap:13px;align-content:start">
+      <div class="card">
+        <span class="pill pill--verm" style="align-self:flex-start">Never invented</span>
+        <p>A cost or rate with no source becomes <b>&ldquo;not publicly disclosed &mdash; contact the bank directly.&rdquo;</b> Inverted and absurd ranges are repaired, not prettied.</p>
+      </div>
+      <div class="card">
+        <span class="pill pill--gold" style="align-self:flex-start">Never misattributed</span>
+        <p>Stamp duty and registration are re-filed to the state or registrar <b>after</b> generation. The prompt asks for the right answer; the code guarantees it.</p>
+      </div>
+      <div class="card">
+        <span class="pill pill--indigo" style="align-self:flex-start">Bands, not guarantees</span>
+        <p>Real pricing depends on credit score, amount and tenure, so every rate is a published band.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; accuracy</span>
+    <span>07</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 8. AUDIT TRAIL ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Provenance</p>
+      <h2>Any answer can be taken apart.</h2>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:32px;flex:1;min-height:0">
+    <div style="display:grid;gap:13px;align-content:start">
+      <p class="tight">The cache row <em>is</em> the audit trail</p>
+      <ul class="bullets">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>The <strong>exact query</strong> that produced this answer.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Every <strong>source URL</strong> that was actually read.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong>When</strong> it was researched, and when it goes stale.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Which <strong>model and provider</strong> structured it.</span></li>
+      </ul>
+      <div class="callout" style="padding:14px 18px">
+        <p style="font-size:14px;line-height:22px"><b>Nothing is cited that was not opened.</b> A URL only becomes a source if the fetch returned readable text &mdash; so the citation list is exactly the set of pages that were read.</p>
+      </div>
+      <div class="card" style="padding:15px 18px;gap:6px">
+        <span class="tight">Why the cache is trustworthy</span>
+        <p style="font-size:13px;line-height:20px">A pre-warmed entry is marked as such on screen and is not presented as a live lookup. The freshness window is stored per row, so a rate cannot outlive the page it came from.</p>
+      </div>
+    </div>
+    <div class="shot shot--fit" style="align-self:start">
+      <div class="shot__bar"><i></i><i></i><i></i><em>show the exact research record</em></div>
+      <img src="shots/evidence-record.png" alt="The research record showing the timestamp, cache key, the exact query sent, the search model and the re-research window" />
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; provenance</span>
+    <span>08</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 9. VERIFICATION ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Verification</p>
+      <h2>Tested like infrastructure, not like a demo.</h2>
+    </div>
+  </div>
+
+  <div class="cols c-4" style="margin-bottom:26px">
+    <div class="stat"><b>188</b><span>Python tests, no network and no API keys required</span></div>
+    <div class="stat"><b>21/21</b><span>page &times; width combinations clean</span></div>
+    <div class="stat"><b>14/14</b><span>example links return sourced checklists</span></div>
+    <div class="stat"><b>12/12</b><span>keyboard and form-submission checks</span></div>
+  </div>
+
+  <hr class="rule" />
+
+  <div class="cols c-2" style="align-items:start">
+    <div>
+      <p class="tight" style="margin-bottom:12px">The gates earned their keep</p>
+      <ul class="bullets bullets--vermillion">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong>A boot crash.</strong> <span class="mono" style="font-size:14px">DATABASE_PATH</span> in a missing directory died on the first write.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong>A form that went nowhere</strong> &mdash; the submit button reloaded the home page, so it looked like &ldquo;no results&rdquo;.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong>A contrast failure</strong> at 4.41:1, and a board clipping off-canvas at 375px.</span></li>
+      </ul>
+    </div>
+    <div>
+      <p class="tight" style="margin-bottom:12px">What runs in CI</p>
+      <ul class="bullets">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Full Python suite, then a <strong>real browser boot</strong>, before anything is deployed.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Flip-board geometry asserted across <strong>0&ndash;14 documents</strong> and all three statuses.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>No dependency on a public search engine having a good day.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:20px;border-top:1px solid var(--rule)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="mono" style="font-size:13px;color:var(--indigo);background:var(--indigo-tint);border:1px solid #C3D0E0;border-radius:4px;padding:7px 11px">pytest tests/ -q</span>
+      <span style="font:500 13px/18px var(--mono);color:var(--forest)">188 passed in ~7s</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="mono" style="font-size:13px;color:var(--indigo);background:var(--indigo-tint);border:1px solid #C3D0E0;border-radius:4px;padding:7px 11px">npm run gates</span>
+      <span style="font:500 13px/18px var(--mono);color:var(--forest)">21/21 &middot; stable &middot; 14/14 &middot; 12/12</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; verification</span>
+    <span>09</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 10. IBM BOB ══════════════════ -->
+<section class="slide ink">
+  <div class="head">
+    <div>
+      <p class="eyebrow">IBM Bob 2.0</p>
+      <h2>An engineering partner, start to finish.</h2>
+    </div>
+  </div>
+
+  <div class="cols c-2" style="gap:38px">
+    <div>
+      <p class="tight" style="color:rgba(255,255,255,0.55);margin-bottom:12px">Designed with Bob</p>
+      <ul class="bullets" style="gap:12px">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>The <strong style="color:#fff">cache-first architecture</strong> &mdash; separating search from generation so both can fail independently.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>The <strong style="color:#fff">provider registry</strong>, circuit breaker, and runtime model discovery.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">SQLite caching, job polling</strong>, search-result parsing, page ranking.</span></li>
+      </ul>
+    </div>
+    <div>
+      <p class="tight" style="color:rgba(255,255,255,0.55);margin-bottom:12px">Diagnosed with Bob</p>
+      <ul class="bullets" style="gap:12px">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>The form that reloaded instead of searching, and an <strong style="color:#fff">application-context error</strong> in a background thread.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>A <strong style="color:#fff">residency-code mismatch</strong> that silently emptied failure suggestions.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong style="color:#fff">A regression test per defect</strong> &mdash; the boot crash, the form that reloaded instead of searching, and the empty-suggestion mismatch each have a test named after them.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:22px">
+    <p class="tight" style="color:rgba(255,255,255,0.55);margin-bottom:11px">Where to check it in the repository</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-bottom:16px">
+      <div class="card" style="padding:13px 15px;gap:5px">
+        <span class="mono" style="font-size:11.5px;color:#F0A99E">app/ai/client.py</span>
+        <p style="font-size:12.5px;line-height:18px">The provider registry, circuit breaker and model discovery.</p>
+      </div>
+      <div class="card" style="padding:13px 15px;gap:5px">
+        <span class="mono" style="font-size:11.5px;color:#F0A99E">app/research/agent.py</span>
+        <p style="font-size:12.5px;line-height:18px">Cache-first orchestration and the degradation ladder.</p>
+      </div>
+      <div class="card" style="padding:13px 15px;gap:5px">
+        <span class="mono" style="font-size:11.5px;color:#F0A99E">app/research/synthesize.py</span>
+        <p style="font-size:12.5px;line-height:18px">The honesty rules enforced after generation.</p>
+      </div>
+      <div class="card" style="padding:13px 15px;gap:5px">
+        <span class="mono" style="font-size:11.5px;color:#F0A99E">tests/</span>
+        <p style="font-size:12.5px;line-height:18px">188 tests plus four browser gates, one per defect class.</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="pill" style="background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.24);color:#fff">No watsonx.ai</span>
+      <span class="pill" style="background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.24);color:#fff">No watsonx Orchestrate</span>
+      <span class="chain__note" style="color:rgba(255,255,255,0.72)">Task-session summaries in the repository</span>
+    </div>
+  </div>
+
+  <div class="foot" style="color:rgba(255,255,255,0.55)">
+    <span class="mark">Kaagaz &middot; IBM Bob</span>
+    <span>10</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 11. HONEST LIMITS + CLOSE ══════════════════ -->
+<section class="slide">
+  <div class="head">
+    <div>
+      <p class="eyebrow">Honest limits</p>
+      <h2>What this is, and is not.</h2>
+    </div>
+  </div>
+
+  <div class="cols c-2" style="align-items:start;flex:1;min-height:0">
+    <div>
+      <p class="tight" style="margin-bottom:12px">Known limits</p>
+      <ul class="bullets bullets--vermillion">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Informational only. <strong>Not legal or financial advice.</strong></span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Cold research needs a reachable search provider; when blocked it <strong>shows overlapping cached cases</strong> instead of failing blank.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>English only. Coverage is exactly as good as <strong>public sources</strong> are.</span></li>
+      </ul>
+    </div>
+    <div>
+      <p class="tight" style="margin-bottom:12px">Next</p>
+      <ul class="bullets">
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Persist the research record so the cache survives restarts.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span><strong>Per-field freshness</strong> &mdash; rates move weekly, document lists monthly.</span></li>
+        <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 12.4l4.6 4.6L19.2 7.2"/></svg><span>Regional languages, and upload-based verification.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:22px">
+    <p class="tight" style="margin-bottom:11px">Tradeoffs we chose deliberately</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding-bottom:20px">
+      <div class="card" style="padding:15px 17px;gap:6px">
+        <span class="pill pill--indigo" style="align-self:flex-start">SQLite, not Postgres</span>
+        <p style="font-size:13px;line-height:20px">One writer, one process, one file. Correct for this. Scaling out means migrating off it &mdash; a different project, not a config change.</p>
+      </div>
+      <div class="card" style="padding:15px 17px;gap:6px">
+        <span class="pill pill--indigo" style="align-self:flex-start">Keyless search, not a paid API</span>
+        <p style="font-size:13px;line-height:20px">Costs nothing and works with no keys, which is why the whole app runs free. The trade is that it can be rate-limited.</p>
+      </div>
+      <div class="card" style="padding:15px 17px;gap:6px">
+        <span class="pill pill--indigo" style="align-self:flex-start">Grounding, not a bigger model</span>
+        <p style="font-size:13px;line-height:20px">Reading the real pages beats asking a larger model to summarise them, and it is what makes the citations checkable.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;display:grid;grid-template-columns:1fr auto;gap:32px;align-items:end">
+    <div>
+      <h3 style="font:600 26px/32px var(--serif);color:var(--indigo);margin-bottom:8px">Ask it anything. It will show its work.</h3>
+      <p style="font-size:15px">Every figure traceable to a source you can open, and every gap named instead of filled.</p>
+    </div>
+    <div style="display:flex;gap:9px;align-items:center">
+      <span class="pill pill--indigo">github.com/gabsgj/Kaagaz</span>
+      <span class="pill">flask &middot; sqlite &middot; no build step</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="mark">Kaagaz &middot; thank you</span>
+    <span>11</span>
+  </div>
+</section>
+
+</body>
+</html>

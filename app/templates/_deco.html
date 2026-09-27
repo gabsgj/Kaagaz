@@ -1,0 +1,62 @@
+{#
+  Kaagaz — decorative line art.
+
+  A fourth visual layer, and the smallest: one-off ornaments drawn in outline
+  rather than filled. It exists as its own file so the other three layers stay
+  exactly as they are —
+
+      _icons.html   functional glyphs, 1.75 stroke, unambiguous at 16px
+      _bubble.html  filled characters, one family, one face
+      _logo.html     the brand mark, filled
+      _deco.html     this: line art, no meaning, purely atmosphere
+
+  The stick figure is the one ornament that carries a little personality, so it
+  reuses the family's face — two eyes and one smile arc — rather than inventing
+  a fourth way of drawing a person. Everything else here is hidden from
+  assistive tech, because none of it means anything.
+#}
+
+{#
+  A person waving, drawn as a single-weight line figure. 120x140 viewBox so the
+  proportions read as a person rather than as a stick.
+
+  Only the stroke weight is the app's 1.75; this is line art, not the icon set,
+  so it is not held to the icon grid or checked alongside the regulatory glyphs.
+#}
+{% macro stick_wave(size=120, cls='') -%}
+<svg width="{{ size }}" height="{{ size * 140 // 120 }}" viewBox="0 0 120 140"
+     fill="none" stroke="currentColor" stroke-width="4.5"
+     stroke-linecap="round" stroke-linejoin="round"
+     class="deco {{ cls }}" aria-hidden="true" focusable="false">
+  <!-- head -->
+  <circle cx="56" cy="30" r="16"/>
+  <!-- the same two eyes and one smile the bubble family uses -->
+  <path d="M50 29h.01M62 29h.01" stroke-width="7"/>
+  <path d="M50 36c2.6 3 9.4 3 12 0" stroke-width="4"/>
+  <!-- body and legs -->
+  <path d="M56 46v40"/>
+  <path d="M56 86 42 116"/>
+  <path d="M56 86 70 116"/>
+  <!-- left arm down, right arm up in a wave -->
+  <path d="M56 56 36 78"/>
+  <path d="M56 56 78 44"/>
+  <path d="M78 44 86 26"/>
+  <path d="M80 22h.01M86 26h.01M92 22h.01" stroke-width="7"/>
+</svg>
+{%- endmacro %}
+
+
+{#
+  A small speech bubble, for the footer line that points at the sources. Same
+  stroke weight as the stick figure so the two sit together.
+#}
+{% macro deco_bubble(size=64, cls='') -%}
+<svg width="{{ size }}" height="{{ size * 0.78 | round | int }}" viewBox="0 0 80 62"
+     fill="none" stroke="currentColor" stroke-width="4.5"
+     stroke-linecap="round" stroke-linejoin="round"
+     class="deco {{ cls }}" aria-hidden="true" focusable="false">
+  <rect x="4" y="4" width="62" height="38" rx="14"/>
+  <path d="M20 42 14 56l16-12"/>
+  <path d="M20 17h30M20 28h18" stroke-width="4.5"/>
+</svg>
+{%- endmacro %}

@@ -1,0 +1,76 @@
+{#
+  Kaagaz — the brand mark.
+
+  A third layer, alongside _icons.html (functional outlined glyphs) and
+  _bubble.html (illustrated characters). The mark is filled and shaded, so it
+  cannot live in the icon set: that set is asserted to be fully outlined at a
+  single 1.75 stroke weight, and a regulatory glyph has to be unambiguous at
+  16px. Mixing the three styles in one place is what makes an interface read as
+  assembled rather than designed.
+
+  Two variants, because the masthead and the page ground need opposite
+  treatment:
+
+    logo_mark()      — for dark grounds (the indigo masthead)
+    logo_mark_light() — for the cream page
+
+  The silhouette does the work at small sizes: one sheet, one bold check, and a
+  SINGLE heavy rule. Two thin rules were tried first and were mush at the 30px
+  this mark actually renders at in the masthead — they turned into a grey
+  smudge. One rule at 2.4 units survives. The app/static/favicon.svg file is the
+  same mark on the 32px grid; keep the two in step.
+#}
+
+{% macro _mark(size, uid, plate, plate_edge, sheet, fold, rule, badge, check, cls='') -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 32 32" fill="none"
+     class="logo {{ cls }}" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="{{ uid }}p" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="{{ plate[0] }}"/>
+      <stop offset="1" stop-color="{{ plate[1] }}"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="8"
+        fill="url(#{{ uid }}p)" stroke="{{ plate_edge }}"/>
+  <path d="M8 6h10l5 5v15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="{{ sheet }}"/>
+  <path d="M18 6l5 5h-5V6z" fill="{{ fold }}"/>
+  <path d="M10 15.5h7" stroke="{{ rule }}" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="21" cy="21.5" r="7" fill="{{ badge }}"/>
+  <path d="M17.6 21.6l2.4 2.4 4.4-4.7" fill="none" stroke="{{ check }}"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+{%- endmacro %}
+
+
+{#
+  For dark grounds. The plate is a lifted glass panel rather than solid indigo,
+  so the mark has a silhouette against the masthead instead of dissolving into
+  it, and the check is a brighter green to hold its contrast on a dark field.
+#}
+{% macro logo_mark(size=30, cls='') -%}
+{{ _mark(size, 'kD', ['#3A5F92', '#22406A'], 'rgba(255,255,255,0.30)',
+                    '#FFFCF5', '#E4D7BE', '#AEB7C2', '#3FA772', '#FFFFFF', cls) }}
+{%- endmacro %}
+
+
+{#
+  For the cream page ground. Solid indigo plate, matching the favicon.
+#}
+{% macro logo_mark_light(size=30, cls='') -%}
+{{ _mark(size, 'kL', ['#2A4C7C', '#1B3455'], 'rgba(27,52,85,0.60)',
+                    '#FFFCF5', '#E7DAC2', '#AEB7C2', '#2F7A52', '#FFFFFF', cls) }}
+{%- endmacro %}
+
+
+{#
+  Full lockup: mark plus the wordmark, for anywhere the two sit together.
+  The word is set in the app's serif, so the lockup stays in the same voice as
+  the headings rather than introducing a second typeface for the brand.
+#}
+{% macro logo_lockup(size=28, variant='dark') -%}
+{% set mark = logo_mark_light(size) if variant == 'light' else logo_mark(size) %}
+<span class="wordmark">
+  {{ mark }}
+  <span class="wordmark__text">Kaagaz</span>
+</span>
+{%- endmacro %}

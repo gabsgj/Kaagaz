@@ -162,7 +162,7 @@ Two backends sit behind that:
 
 DuckDuckGo throttles aggressively and answers a blocked request with **HTTP 202
 and a challenge page** rather than an error. That is detected explicitly, and a
-throttled query is retried with backoff before giving up and falling through to
+throttled query gets one short retry before giving up and falling through to
 the second backend. A throttle is never reported as "no results".
 
 ### 3.4 The generation chain
@@ -232,7 +232,7 @@ kaagaz/
       agent.py             Orchestration: cache -> research -> store -> answer
       jobs.py              Background job registry with inline fallback
       routes.py            JSON API
-    ai/client.py           OpenRouter -> NVIDIA NIM chain, plain + JSON modes
+    ai/client.py           OpenRouter -> Groq -> NVIDIA NIM chain, plain + JSON modes
     data/
       seed_research.py     The pre-researched seed set, with real source URLs
       dataset.json         Phase-1 static dataset (inline explainer + fallback)
@@ -240,7 +240,7 @@ kaagaz/
     static/js/             flipboard.js, checklist.js
     templates/             base, index, checklist, researching, about, _icons
   scripts/preseed.py       Pre-warm / refresh the cache
-  tests/                   133 Python tests + 2 browser gates
+  tests/                   Python suite plus four browser gates
   .aimem/                  Persistent cross-agent context and decision log
 ```
 
@@ -315,26 +315,51 @@ advice.
 
 ## 6. The design
 
-Two layers, deliberately combined.
+Three layers, deliberately kept apart so the page never reads as assembled
+rather than designed.
 
-**Collage layer (atmosphere).** Warm cream paper with a fine irregular grain,
-torn-paper deckle dividers between major sections, and a small number of
-hand-placed decorative elements — a paperclip on the ask card, an ink stamp, a
-wax seal. Each sits next to the content it annotates; none is scattered as
-filler.
+**Tactile layer (form).** Soft skeuomorphism. Every raised surface carries a
+three-part shadow: a tight contact shadow, a wide ambient shadow, and an inner
+top highlight that catches light along a rounded edge. Inputs are *recessed*
+instead — a pressed well that opens back out as you type into it — and buttons
+sink a pixel when pressed. The shadows are a warm brown at low alpha, never
+neutral black, which is the difference between paper and grey plastic. Radii
+run 10 → 16 → 24 → 32px, closed as a set, so nothing invents a `7px`.
+
+**Paper layer (atmosphere).** Warm cream ground with a fine irregular grain,
+torn-paper deckle dividers, and a small number of hand-placed elements — a
+paperclip on the ask card, an ink stamp, a wax seal. Each sits next to the
+content it annotates.
+
+**Character layer (voice).** A cast of five soft, rounded people — presenting a
+file, carrying a stack of papers, thinking, celebrating, waiting — used as
+illustration beside the content they belong to. They are a *separate* layer
+from the icon set on purpose: filled and shaded rather than outlined, and never
+mixed with the functional glyphs in the same place.
+
+**Brand layer (identity).** The mark is a sheet of paper with a folded corner
+and a bold green check: *your paperwork, handled*. It is built for the size it is
+actually seen at — a browser tab is 16px, so the silhouette does the work and
+the internal detail is a single heavy rule, because two thin rules turned to grey
+mush at the 30px it renders at in the masthead. Two variants ship: a glass plate
+for the dark masthead, a solid indigo plate for the cream page, and the same
+drawing flattened into `favicon.svg`.
 
 **Vector layer (function).** Every icon is a custom SVG drawn for this app: 33
-glyphs, all on the same 24×24 grid, all **fully outlined** with a single
-stroke width of 1.75 and round caps and joins. No icon pack is used anywhere,
-because mixing one in is what makes an interface read as assembled rather than
-designed. The four regulatory buckets get their own glyphs — a seal for RBI
-rules, a stamp for the state stamp act, a document for the registrar, a shop for
-bank policy.
+glyphs on one 24×24 grid, all fully outlined at a single 1.75 stroke weight
+with round caps and joins. No icon pack is used anywhere. The four regulatory
+buckets get their own glyphs — a seal for RBI rules, a stamp for the state
+stamp act, a document for the registrar, a shop for bank policy.
+
+Those last three layers — characters, brand, icons — are deliberately kept in
+separate files and never mixed on one screen. A filled, shaded mascot beside a
+1.75-stroke regulatory glyph is what makes an interface read as assembled
+rather than designed, so the separation is asserted in the test suite rather
+than left as a comment.
 
 **Grid discipline.** Spacing is an 8px scale — 8, 16, 24, 32, 48, 64 — with no
-other value appearing in any margin, padding or gap. Three corner radii, two
-shadows. Type is Fraunces for headings and Inter for body, with a 68ch measure
-and line heights on the scale.
+other value in any margin, padding or gap. Type is Fraunces for headings and
+Inter for body, 68ch measure, line heights on the scale.
 
 **The flip-board.** The signature component, and the one that has to be
 pixel-perfect because it is the centrepiece of the demo video. Numbers render
@@ -344,8 +369,12 @@ width of the total, so the board cannot shift when the count crosses from one
 digit to two. A status badge carries a 112px minimum, sized by measurement to
 hold its longest label. Progress survives a reload via `localStorage`.
 
-This is all verified mechanically rather than by eye — see [Section 9](#9-testing).
+Depth here is *only* surface treatment. No geometry moves: the jitter gate
+measures the board and the badge across every document count and all three
+status states, and asserts they do not shift by a pixel.
 
+This is all verified mechanically rather than by eye — see
+[Section 9](#9-testing).
 ---
 
 ## 7. The two distinctions that cost people money
@@ -480,7 +509,7 @@ different project. `gthread` is the worker class that uses those threads.
 ## 9. Testing
 
 ```sh
-pytest tests/ -q          # 185 tests, ~7s
+pytest tests/ -q          # 188 tests, ~7s
 ```
 
 They run with **no network access and no API keys**, deliberately: they assert
@@ -503,7 +532,8 @@ Or individually, against a server already running on :5000:
 BASE=http://127.0.0.1:5000 node tests/browser/responsive_audit.js  # 7 pages x 375/768/1280px
 BASE=http://127.0.0.1:5000 node tests/browser/jitter_test.js       # flip-board stability
 BASE_URL=http://127.0.0.1:5000 node tests/browser/demo_links_test.js # every demo chip
-BASE_URL=http://127.0.0.1:5000 node tests/browser/keyboard_test.js  # shortcuts
+BASE_URL=http://127.0.0.1:5000 node tests/browser/keyboard_test.js  # shortcuts and form submission
+```
 
 `responsive_audit.js` checks for horizontal overflow, edge bleed, content
 clipped inside its own box, sub-24px tap targets, WCAG AA contrast computed
@@ -513,8 +543,9 @@ that all digit cells stay the same width, that the status badge does not resize
 between its three labels, and that nothing shifts during the 3D flip animation.
 
 `demo_links_test.js` clicks every example chip and asserts a complete, sourced
-checklist came back from cache. `keyboard_test.js` drives the shortcuts below on
-a real keypress path rather than asserting the handlers exist.
+checklist came back from cache. `keyboard_test.js` drives the shortcuts and the
+landing-page form submission on a real keypress path rather than asserting that
+the handlers exist.
 
 All four exit non-zero on failure. This is not ceremony: these gates are what
 caught a 4.41:1 contrast failure, a board clipping off-canvas at 375px, the
