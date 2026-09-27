@@ -11,3 +11,4 @@ instance/
 node_modules/
 *.log
 shots/
+_dl_run.js
