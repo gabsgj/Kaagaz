@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Kaagaz — how it works{% endblock %}
+
+{% block content %}
+<div class="shell shell--narrow">
+
+  <div class="ask-hero">
+    <p class="eyebrow">How it works</p>
+    <h1 class="display">A research agent, not a lookup table</h1>
+    <p class="lede ask-hero__lede">
+      Most document checklists are hand-curated spreadsheets, which means they
+      cover what somebody thought to include and nothing else. Kaagaz asks the
+      web at the moment you ask, and files what it finds.
+    </p>
+  </div>
+
+  <!-- ══════════ THE PIPELINE ══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">What happens when you ask</h2>
+  </div>
+  <div class="sheet sheet--pad" style="margin-bottom:32px">
+    <ol class="steps">
+      <li class="step" data-source="bank_internal">
+        <div class="step__head">
+          <span class="step__num">01</span>
+          <h3 class="step__title">Your question is normalised</h3>
+        </div>
+        <div class="step__body">
+          <p class="step__why">
+            The transaction, bank, state and residency status are cleaned up so
+            "hdfc bank ltd" and "HDFC Bank" are the same question. Anything we do
+            not recognise passes straight through untouched — an unknown bank is
+            not a rejected bank.
+          </p>
+        </div>
+      </li>
+      <li class="step" data-source="bank_internal">
+        <div class="step__head">
+          <span class="step__num">02</span>
+          <h3 class="step__title">The cache is checked</h3>
+        </div>
+        <div class="step__body">
+          <p class="step__why">
+            Every answer is stored with its sources, the exact query that produced
+            it, and a timestamp. If a fresh enough entry exists it is returned
+            immediately and labelled with its "as of" date. That is why a
+            question you have asked before answers in milliseconds.
+          </p>
+        </div>
+      </li>
+      <li class="step" data-source="bank_internal">
+        <div class="step__head">
+          <span class="step__num">03</span>
+          <h3 class="step__title">The web is searched</h3>
+        </div>
+        <div class="step__body">
+          <p class="step__why">
+            On a miss, a model with live web access reads the bank's own product
+            pages, RBI directions and state registration department sites. The
+            URLs it actually opened are captured as structured citations — not
+            scraped afterwards.
+          </p>
+        </div>
+      </li>
+      <li class="step" data-source="bank_internal">
+        <div class="step__head">
+          <span class="step__num">04</span>
+          <h3 class="step__title">The checklist is built</h3>
+        </div>
+        <div class="step__body">
+          <p class="step__why">
+            Those findings are turned into a strict JSON checklist through a
+            separate generation step on a different provider chain, so a search
+            outage and a generation outage are independent failures. Every item
+            is ordered, costed, timed and attributed to whoever imposes it.
+          </p>
+        </div>
+      </li>
+      <li class="step" data-source="bank_internal">
+        <div class="step__head">
+          <span class="step__num">05</span>
+          <h3 class="step__title">It is filed, with its sources</h3>
+        </div>
+        <div class="step__body">
+          <p class="step__why">
+            The answer, every source URL, the retrieval time and the exact query
+            are written to one row. That row is both the cache and the audit
+            trail, which is why the "show the exact research record" panel on
+            every result is possible at all.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <!-- ══════════ THE TWO CONFUSIONS ══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">The two things people get wrong most</h2>
+  </div>
+
+  <div class="sheet sheet--pad" style="margin-bottom:24px">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="flex:none;color:var(--vermillion)">{{ ico.icon('globe', 24) }}</div>
+      <div>
+        <h3 class="h3" style="margin-bottom:8px">Resident, NRI, and the awkward middle</h3>
+        <p class="body" style="color:var(--ink-2)">
+          An <strong>ordinary resident</strong> is taxed in India on worldwide
+          income and needs no FEMA paperwork. An <strong>NRI</strong> is an
+          Indian citizen living abroad, and banks require a work permit, an
+          attested employment contract and overseas bank statements instead of
+          Indian ones. The genuinely confusing case is the
+          <strong>mixed household</strong> — someone who is resident by status
+          but earns or holds money abroad, where Indian tax residency rules and
+          FEMA remittance rules can both apply at once. And an
+          <strong>all-NRI joint loan</strong> is the hardest version, because
+          every applicant and every guarantor is overseas. Asking for the wrong
+          one produces a checklist full of documents you do not need and misses
+          the attestations you do.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet sheet--pad" style="margin-bottom:32px">
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="flex:none;color:var(--vermillion)">{{ ico.icon('safe', 24) }}</div>
+      <div>
+        <h3 class="h3" style="margin-bottom:8px">Loan against FD vs FD as a guarantee</h3>
+        <p class="body" style="color:var(--ink-2)">
+          These are routinely confused and the difference is not academic.
+          <strong>Loan against your FD</strong> means you borrow money and your
+          own deposit is the security — you receive cash, the deposit keeps
+          earning interest, and it is yours again when you repay. Typically 1-2%
+          above the deposit rate, minimal paperwork.
+          <strong>Using your FD as a guarantee</strong> means you are
+          collateral for <em>someone else's</em> loan. You get nothing. The
+          deposit is at risk the moment that borrower defaults, and you carry
+          that risk with no benefit. It requires a specific third-party security
+          consent, and banks are not obliged to accept it. If you are being
+          asked to sign one, read every page and get independent advice.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ HONESTY ══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">What we will not do</h2>
+  </div>
+  <div class="sheet sheet--pad" style="margin-bottom:32px">
+    <ul class="sources">
+      <li class="sources__item">
+        <span class="sources__index" aria-hidden="true">01</span>
+        <span><strong>Invent a figure.</strong> If a bank or state does not publish
+        a number, the answer says so and tells you to ask directly. The
+        structuring step is explicitly forbidden from filling a blank with an
+        estimate.</span>
+      </li>
+      <li class="sources__item">
+        <span class="sources__index" aria-hidden="true">02</span>
+        <span><strong>Call stamp duty an RBI matter.</strong> It is not. This is
+        the single most common error in this domain, so it is corrected in code
+        after generation, not merely requested in the prompt.</span>
+      </li>
+      <li class="sources__item">
+        <span class="sources__index" aria-hidden="true">03</span>
+        <span><strong>Quote a single interest rate.</strong> Actual pricing
+        depends on credit score, amount and tenure, so every rate is a
+        published band.</span>
+      </li>
+      <li class="sources__item">
+        <span class="sources__index" aria-hidden="true">04</span>
+        <span><strong>Present a researched answer as permanent fact.</strong>
+        Every result carries its retrieval date and the sources behind it, and
+        says plainly that it is not financial or legal advice.</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ══════════ LIVE RECORD ══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">Right now, in this instance</h2>
+  </div>
+  <div class="bands">
+    <div class="band">
+      <span class="band__label">Checklists on file</span>
+      <span class="band__value">{{ stats.entries }}</span>
+      <span class="band__note">{{ stats.seeds }} pre-researched, the rest researched live</span>
+    </div>
+    <div class="band">
+      <span class="band__label">Sources on file</span>
+      <span class="band__value">{{ stats.distinct_sources }}</span>
+      <span class="band__note">Each answer keeps the full URL list it was built from</span>
+    </div>
+  </div>
+
+  <div style="margin-top:32px">
+    <a href="/" class="btn btn--primary btn--lg">Ask a question</a>
+  </div>
+
+</div>
+{% endblock %}

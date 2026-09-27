@@ -38,12 +38,17 @@ def create_app():
     from .checklist import checklist_bp
     from .ai import ai_bp
     from .data import data_bp
+    from .research.routes import research_bp
+    from .research import cache as research_cache
     app.register_blueprint(checklist_bp)
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     app.register_blueprint(data_bp, url_prefix='/api/data')
+    app.register_blueprint(research_bp, url_prefix='/api/research')
 
     with app.app_context():
         from .data.db_seed import seed_db
         seed_db(app)
+        # Phase 2: research cache lives alongside the Phase-1 seed dataset
+        research_cache.init_schema(app)
 
     return app

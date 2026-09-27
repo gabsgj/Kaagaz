@@ -1,0 +1,14 @@
+{
+  "name": "kaagaz-browser-tests",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Responsive and flip-board stability gates for Kaagaz",
+  "scripts": {
+    "responsive": "node responsive_audit.js",
+    "jitter": "node jitter_test.js",
+    "all": "node responsive_audit.js && node jitter_test.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

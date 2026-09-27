@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import json
 import requests
@@ -6,9 +7,24 @@ from datetime import datetime
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 NVIDIA_NIM_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct"
+
+# Provider order is unchanged from Phase 1: OpenRouter first, NVIDIA NIM
+# second. What changed in Phase 2 is the *model* on OpenRouter.
+#
+# gpt-4o-mini is now primary. The research pipeline asks for strict JSON over a
+# ~6k-token grounding prompt, and llama-3.1-8b was returning prose and
+# truncated JSON often enough to drop whole research runs into the unstructured
+# fallback. gpt-4o-mini returns valid JSON essentially every time and costs
+# roughly $0.00005 per call, so reliability is effectively free here.
+# llama-3.1-8b stays as the second attempt because it is ~6x cheaper still.
+OPENROUTER_MODELS = ["openai/gpt-4o-mini", "meta-llama/llama-3.1-8b-instruct"]
 NVIDIA_NIM_MODEL = "meta/llama-3.1-8b-instruct"
-TIMEOUT = 8  # seconds
+# Retained for callers that want a single name.
+OPENROUTER_MODEL = OPENROUTER_MODELS[0]
+
+# Research generation runs on a long, structured prompt, so it gets a long
+# ceiling. Still bounded, so a wedged provider can never hang the request.
+TIMEOUT = 60  # seconds
 
 def _build_prompt(term: str, context_rows: list) -> tuple[str, str]:
     context_text = ""
@@ -39,7 +55,8 @@ def _build_prompt(term: str, context_rows: list) -> tuple[str, str]:
     )
     return system_prompt, user_prompt
 
-def _call_openrouter(system_prompt: str, user_prompt: str, max_tokens: int) -> str:
+def _call_openrouter_model(model, system_prompt, user_prompt, max_tokens,
+                           temperature, json_mode):
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         raise ValueError("No OpenRouter API key")
@@ -50,19 +67,36 @@ def _call_openrouter(system_prompt: str, user_prompt: str, max_tokens: int) -> s
         "X-Title": "Kaagaz"
     }
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
         "max_tokens": max_tokens,
-        "temperature": 0.2
+        "temperature": temperature
     }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
     resp = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=TIMEOUT)
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
 
-def _call_nvidia_nim(system_prompt: str, user_prompt: str, max_tokens: int) -> str:
+
+def _call_openrouter(system_prompt, user_prompt, max_tokens,
+                     temperature=0.2, json_mode=False):
+    """Walk the OpenRouter model tier list; raise if all of them fail."""
+    last = None
+    for model in OPENROUTER_MODELS:
+        try:
+            return _call_openrouter_model(model, system_prompt, user_prompt,
+                                          max_tokens, temperature, json_mode)
+        except Exception as exc:
+            last = exc
+    raise last if last else ValueError("No OpenRouter model available")
+
+
+def _call_nvidia_nim(system_prompt: str, user_prompt: str, max_tokens: int,
+                     temperature: float = 0.2, json_mode: bool = False) -> str:
     api_key = os.environ.get("NVIDIA_NIM_API_KEY", "")
     if not api_key:
         raise ValueError("No NVIDIA NIM API key")
@@ -77,8 +111,10 @@ def _call_nvidia_nim(system_prompt: str, user_prompt: str, max_tokens: int) -> s
             {"role": "user", "content": user_prompt}
         ],
         "max_tokens": max_tokens,
-        "temperature": 0.2
+        "temperature": temperature
     }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
     resp = requests.post(NVIDIA_NIM_API_URL, headers=headers, json=payload, timeout=TIMEOUT)
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
@@ -145,3 +181,95 @@ def generate(term: str, context_rows: list, max_tokens: int = 300) -> dict:
     text = _static_fallback(term, context_rows)
     _log("static_fallback", prompt_len, True, int((time.monotonic() - t0) * 1000))
     return {"explanation": text, "source": "static_fallback"}
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Structured generation — used by the research agent (Phase 2)
+#
+#  Same provider chain as generate(): OpenRouter -> NVIDIA NIM.
+#  Difference: the caller supplies its own system/user prompts and wants
+#  parsed JSON back, with a lenient repair pass for models that wrap
+#  their output in prose or a ```json fence.
+# ═══════════════════════════════════════════════════════════════════
+
+def _call_provider(name, system_prompt, user_prompt, max_tokens, temperature, json_mode):
+    if name == "openrouter":
+        return _call_openrouter(system_prompt, user_prompt, max_tokens,
+                                temperature=temperature, json_mode=json_mode)
+    return _call_nvidia_nim(system_prompt, user_prompt, max_tokens,
+                            temperature=temperature, json_mode=json_mode)
+
+
+def _extract_json(text):
+    """Pull a JSON object out of a model response, however it wrapped it."""
+    if not text:
+        return None
+    text = text.strip()
+    # Strip ```json ... ``` fences
+    fence = re.search(r"```(?:json)?\s*(.+?)\s*```", text, re.DOTALL)
+    if fence:
+        text = fence.group(1).strip()
+    try:
+        return json.loads(text)
+    except ValueError:
+        pass
+    # First balanced {...} block
+    start = text.find("{")
+    while start != -1:
+        depth = 0
+        in_str = False
+        esc = False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except ValueError:
+                        break
+        start = text.find("{", start + 1)
+    return None
+
+
+def generate_json(system_prompt: str, user_prompt: str, max_tokens: int = 1800,
+                  temperature: float = 0.1) -> dict:
+    """Generate a JSON object, walking the OpenRouter -> NIM fallback chain.
+
+    Returns {"data": <parsed dict or None>, "raw": <text>, "source": <provider>}.
+    `data` is None when every provider failed — callers must handle that.
+    """
+    prompt_len = len(system_prompt) + len(user_prompt)
+    raw = ""
+    for provider in ("openrouter", "nvidia_nim"):
+        t0 = time.monotonic()
+        try:
+            raw = _call_provider(provider, system_prompt, user_prompt,
+                                 max_tokens, temperature, json_mode=True)
+            data = _extract_json(raw)
+            if data is not None:
+                _log(provider, prompt_len, True,
+                     int((time.monotonic() - t0) * 1000))
+                return {"data": data, "raw": raw, "source": provider}
+            # Provider answered but not as JSON — one salvage attempt at the
+            # next provider, which is usually better at strict formats.
+            _log(provider, prompt_len, False,
+                 int((time.monotonic() - t0) * 1000), "unparseable JSON")
+            if provider == "openrouter":
+                continue
+        except Exception as e:
+            _log(provider, prompt_len, False,
+                 int((time.monotonic() - t0) * 1000), str(e)[:80])
+    return {"data": None, "raw": raw, "source": "none"}

@@ -1,247 +1,208 @@
 {% extends "base.html" %}
-{% block title %}Kaagaz — Choose Your Transaction{% endblock %}
+{% import "_icons.html" as ico %}
+{% block title %}Kaagaz — ask about any banking document requirement{% endblock %}
 
 {% block content %}
-<section class="picker-section">
+<div class="shell shell--narrow">
 
-  <div class="picker-hero">
-    <h1 class="picker-hero__heading">What documents do you need?</h1>
-    <p class="picker-hero__sub">
-      Select your transaction type to get a complete, ordered checklist with costs and timelines.
+  <!-- ═══════════ HERO ═══════════ -->
+  <div class="ask-hero">
+    <p class="eyebrow">Research agent · not a lookup table</p>
+    <h1 class="display">What paperwork are you up against?</h1>
+    <p class="lede ask-hero__lede">
+      Name the transaction, the bank and the state. Kaagaz searches the live web,
+      reads the sources, and hands back one ordered checklist — every document,
+      what it costs, how long it takes, and who actually regulates it.
     </p>
-    {% if error %}
-      <div class="inline-error">{{ error }}</div>
-    {% endif %}
   </div>
 
-  <form id="pickerForm" method="GET" action="/checklist" class="picker-form">
-    <input type="hidden" name="transaction_type" id="hiddenTxType" value="" />
-    <input type="hidden" name="state" id="hiddenState" value="" />
+  <!-- ═══════════ LEDGER ═══════════ -->
+  <ol class="ledger">
+    <li class="ledger__step">
+      <span class="ledger__num">1</span>
+      <span class="ledger__label">Describe the transaction<br />any bank, any state</span>
+    </li>
+    <li class="ledger__step">
+      <span class="ledger__num">2</span>
+      <span class="ledger__label">We search, read and cite<br />the primary sources</span>
+    </li>
+    <li class="ledger__step">
+      <span class="ledger__num">3</span>
+      <span class="ledger__label">Tick off each document<br />as you collect it</span>
+    </li>
+  </ol>
 
-    <!-- ─── Transaction Cards ─── -->
-    <div class="card-grid" role="group" aria-label="Transaction types">
+  {% if error %}
+    <div class="notice notice--error" role="alert" style="margin-bottom:24px">
+      {{ ico.icon('alert', 20, cls='notice__icon') }}
+      <span>{{ error }}</span>
+    </div>
+  {% endif %}
 
-      <!-- Home Loan Application -->
-      <div class="tx-card" data-tx="home_loan" data-state-required="true" tabindex="0" role="radio" aria-checked="false">
-        <div class="tx-card__icon">
-          <!-- House SVG -->
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M6 20L20 6L34 20" stroke="#1E3A5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M9 17V32C9 32.55 9.45 33 10 33H17V26H23V33H30C30.55 33 31 32.55 31 32V17" stroke="#1E3A5F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <rect x="16" y="23" width="8" height="10" rx="1" stroke="#1E3A5F" stroke-width="1.5" fill="none"/>
-          </svg>
-        </div>
-        <div class="tx-card__body">
-          <h2 class="tx-card__title">Home Loan Application</h2>
-          <p class="tx-card__desc">Documents for applying to a home loan from a bank or NBFC.</p>
-        </div>
-        <div class="state-selector" id="state-home_loan" hidden>
-          <p class="state-selector__label">Select your state:</p>
-          <div class="state-selector__options">
-            <button type="button" class="state-btn" data-tx="home_loan" data-state="kerala">Kerala</button>
-            <button type="button" class="state-btn" data-tx="home_loan" data-state="maharashtra">Maharashtra</button>
-          </div>
-        </div>
+  <!-- ═══════════ ASK FORM ═══════════ -->
+  <form id="askForm" class="ask-card sheet" novalidate>
+
+    <div class="ask-grid">
+
+      <!-- Transaction -->
+      <div class="field ask-grid__full">
+        <label class="field__label" for="transaction_type">
+          What are you trying to do?
+        </label>
+        <input
+          class="input"
+          type="text"
+          id="transaction_type"
+          name="transaction_type"
+          list="category-list"
+          autocomplete="off"
+          spellcheck="false"
+          required
+          maxlength="120"
+          placeholder="Home loan, loan against FD, property registration…"
+          aria-describedby="tx-hint" />
+        <p class="field__hint" id="tx-hint">
+          Anything at all. If it is not on this list we will still research it.
+        </p>
+        <datalist id="category-list">
+          {% for value, label in popular_categories %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </datalist>
       </div>
 
-      <!-- NRI Account Opening -->
-      <div class="tx-card" data-tx="nri_account" data-state-required="false" tabindex="0" role="radio" aria-checked="false">
-        <div class="tx-card__icon">
-          <!-- Globe / Plane SVG -->
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <circle cx="20" cy="20" r="13" stroke="#1E3A5F" stroke-width="2.2"/>
-            <ellipse cx="20" cy="20" rx="5.5" ry="13" stroke="#1E3A5F" stroke-width="1.5"/>
-            <line x1="7" y1="20" x2="33" y2="20" stroke="#1E3A5F" stroke-width="1.5"/>
-            <line x1="9" y1="14" x2="31" y2="14" stroke="#1E3A5F" stroke-width="1.2"/>
-            <line x1="9" y1="26" x2="31" y2="26" stroke="#1E3A5F" stroke-width="1.2"/>
-            <!-- small plane -->
-            <path d="M26 10 L30 8 L28 12 L24 13 Z" fill="#B3402F"/>
-          </svg>
-        </div>
-        <div class="tx-card__body">
-          <h2 class="tx-card__title">NRI Account Opening</h2>
-          <p class="tx-card__desc">Documents for opening an NRE / NRO savings account.</p>
-        </div>
-        <!-- No state selector for NRI -->
+      <!-- Bank -->
+      <div class="field">
+        <label class="field__label" for="bank">Bank or lender</label>
+        <input
+          class="input"
+          type="text"
+          id="bank"
+          name="bank"
+          list="bank-list"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="120"
+          placeholder="Leave blank for any bank" />
+        <datalist id="bank-list">
+          {% for name in bank_names %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
+        </datalist>
+        <p class="field__hint">Optional. Weights the search towards that bank's own pages.</p>
       </div>
 
-      <!-- Property Sale Deed Registration -->
-      <div class="tx-card" data-tx="property_registration" data-state-required="true" tabindex="0" role="radio" aria-checked="false">
-        <div class="tx-card__icon">
-          <!-- Building / Deed SVG -->
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="7" y="14" width="18" height="20" rx="1" stroke="#1E3A5F" stroke-width="2.2" fill="none"/>
-            <path d="M7 14V11L16 6L25 11V14" stroke="#1E3A5F" stroke-width="1.8" stroke-linejoin="round"/>
-            <rect x="12" y="22" width="5" height="6" rx="0.5" stroke="#1E3A5F" stroke-width="1.4" fill="none"/>
-            <!-- deed scroll -->
-            <rect x="25" y="20" width="10" height="14" rx="2" stroke="#1E3A5F" stroke-width="1.5" fill="none"/>
-            <line x1="27" y1="24" x2="33" y2="24" stroke="#1E3A5F" stroke-width="1"/>
-            <line x1="27" y1="27" x2="33" y2="27" stroke="#1E3A5F" stroke-width="1"/>
-            <line x1="27" y1="30" x2="31" y2="30" stroke="#1E3A5F" stroke-width="1"/>
-            <path d="M29 16 Q30 13 31 16" stroke="#1E3A5F" stroke-width="1.2" fill="none"/>
-          </svg>
-        </div>
-        <div class="tx-card__body">
-          <h2 class="tx-card__title">Property Sale Deed Registration</h2>
-          <p class="tx-card__desc">Documents for registering a property sale deed at the sub-registrar office.</p>
-        </div>
-        <div class="state-selector" id="state-property_registration" hidden>
-          <p class="state-selector__label">Select your state:</p>
-          <div class="state-selector__options">
-            <button type="button" class="state-btn" data-tx="property_registration" data-state="kerala">Kerala</button>
-            <button type="button" class="state-btn" data-tx="property_registration" data-state="maharashtra">Maharashtra</button>
-          </div>
-        </div>
+      <!-- State -->
+      <div class="field">
+        <label class="field__label" for="state">State or union territory</label>
+        <input
+          class="input"
+          type="text"
+          id="state"
+          name="state"
+          list="state-list"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="80"
+          placeholder="Leave blank if not state-specific" />
+        <datalist id="state-list">
+          {% for name in state_names %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
+        </datalist>
+        <p class="field__hint">Optional. Only matters where stamp duty or registration fees apply.</p>
       </div>
 
-      <!-- Business Current Account -->
-      <div class="tx-card" data-tx="business_account" data-state-required="true" tabindex="0" role="radio" aria-checked="false">
-        <div class="tx-card__icon">
-          <!-- Briefcase SVG -->
-          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="5" y="16" width="30" height="18" rx="2" stroke="#1E3A5F" stroke-width="2.2" fill="none"/>
-            <path d="M14 16V13C14 11.9 14.9 11 16 11H24C25.1 11 26 11.9 26 13V16" stroke="#1E3A5F" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="5" y1="24" x2="35" y2="24" stroke="#1E3A5F" stroke-width="1.5"/>
-            <rect x="17" y="21" width="6" height="6" rx="1" stroke="#1E3A5F" stroke-width="1.4" fill="none"/>
-          </svg>
+      <!-- Residency -->
+      <fieldset class="field ask-grid__full" style="border:0;padding:0;margin:0">
+        <legend class="field__label" style="padding:0;margin-bottom:8px">
+          Who is the applicant?
+        </legend>
+        <div class="segmented" role="radiogroup" aria-label="Applicant residency status">
+          {% for value, item in residency_options %}
+            <label class="segmented__option">
+              <input class="segmented__input" type="radio" name="residency"
+                     value="{{ value }}" {% if loop.first %}checked{% endif %} />
+              <span class="segmented__face">
+                <span class="segmented__title">{{ item.label }}</span>
+                <span class="segmented__blurb">{{ item.blurb }}</span>
+              </span>
+            </label>
+          {% endfor %}
         </div>
-        <div class="tx-card__body">
-          <h2 class="tx-card__title">Business Current Account</h2>
-          <p class="tx-card__desc">Documents for opening a current account for a business entity.</p>
-        </div>
-        <div class="state-selector" id="state-business_account" hidden>
-          <p class="state-selector__label">Select your state:</p>
-          <div class="state-selector__options">
-            <button type="button" class="state-btn" data-tx="business_account" data-state="kerala">Kerala</button>
-            <button type="button" class="state-btn" data-tx="business_account" data-state="maharashtra">Maharashtra</button>
-          </div>
-        </div>
-      </div>
+      </fieldset>
 
-    </div><!-- /card-grid -->
+    </div>
 
-    <!-- Continue button -->
-    <div class="picker-actions">
-      <button type="submit" id="continueBtn" class="btn btn--primary btn--lg" disabled>
-        Continue →
+    <div class="ask-actions">
+      <button type="submit" class="btn btn--primary btn--lg" id="askBtn">
+        {{ ico.icon('search', 20) }}
+        <span>Research it</span>
       </button>
-      <p class="picker-actions__hint" id="continueHint">Select a transaction type above to continue.</p>
+      <p class="ask-footnote">
+        {{ ico.icon('info', 16, cls='ask-footnote__icon') }}
+        <span>
+          No account, no upload, nothing stored about you. A cold research takes
+          15–40 seconds; repeat questions are answered from cache instantly.
+        </span>
+      </p>
+    </div>
+
+    <div class="ask-card__pin" aria-hidden="true">
+      {{ ico.paperclip(32) }}
     </div>
   </form>
 
-</section>
+  <!-- ═══════════ STARTING POINTS ═══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">Or start from something common</h2>
+    <span class="meta-sm">Pre-warmed &middot; instant answer</span>
+  </div>
+  <div class="chips" style="margin-bottom:32px">
+    {% for tx, bank, residency, label, note in examples %}
+      <a class="chip" href="/checklist?transaction_type={{ tx | urlencode }}&amp;bank={{ bank | urlencode }}&amp;residency={{ residency }}"
+         title="{{ note }}">{{ label }}</a>
+    {% endfor %}
+  </div>
 
-<script>
-(function () {
-  'use strict';
+  <!-- ═══════════ CACHE STATS — honest about what is pre-researched ══════════ -->
+  <div class="rule-head">
+    <h2 class="h3">What we already know</h2>
+    <span class="meta-sm">Verified against primary sources</span>
+  </div>
+  <div class="stats-row">
+    <div class="bands">
+      <div class="band">
+        <span class="band__label">Checklists pre-researched</span>
+        <span class="band__value">{{ stats.entries }}</span>
+        <span class="band__note">
+          covering the seed cases the demo walks through, each with its sources recorded
+        </span>
+      </div>
+      <div class="band">
+        <span class="band__label">Distinct sources cited</span>
+        <span class="band__value">{{ stats.distinct_sources }}</span>
+        <span class="band__note">
+          bank product pages, RBI directions and state registration department sites
+        </span>
+      </div>
+    </div>
+    <!-- The ink stamp sits here because this is the block making a claim about
+         verification. It annotates that claim rather than decorating the page. -->
+    <div class="stats-row__stamp" aria-hidden="true">
+      {{ ico.ink_stamp('SOURCED', 96) }}
+    </div>
+  </div>
 
-  const STATE_REQUIRED = ['home_loan', 'property_registration', 'business_account'];
+  <div class="notice notice--info">
+    {{ ico.icon('info', 20, cls='notice__icon') }}
+    <span>
+      <strong>The cache is a floor, not a ceiling.</strong>
+      Those {{ stats.entries }} entries exist so the common cases answer instantly
+      and survive a flaky connection. Anything else — any bank, any product, any
+      state — is researched live and then filed into the same record.
+    </span>
+  </div>
 
-  const cards       = document.querySelectorAll('.tx-card');
-  const continueBtn = document.getElementById('continueBtn');
-  const continueHint= document.getElementById('continueHint');
-  const hiddenTx    = document.getElementById('hiddenTxType');
-  const hiddenState = document.getElementById('hiddenState');
-
-  let selectedTx    = null;
-  let selectedState = null;
-
-  function updateContinue() {
-    const needsState = selectedTx && STATE_REQUIRED.includes(selectedTx);
-    const ready = selectedTx && (!needsState || selectedState);
-    continueBtn.disabled = !ready;
-    if (!selectedTx) {
-      continueHint.textContent = 'Select a transaction type above to continue.';
-    } else if (needsState && !selectedState) {
-      continueHint.textContent = 'Now select your state to continue.';
-    } else {
-      continueHint.textContent = '';
-    }
-    hiddenTx.value    = selectedTx    || '';
-    hiddenState.value = selectedState || '';
-  }
-
-  function deselectAll() {
-    cards.forEach(function (card) {
-      card.classList.remove('tx-card--selected');
-      card.setAttribute('aria-checked', 'false');
-    });
-    // Hide all state selectors
-    document.querySelectorAll('.state-selector').forEach(function (sel) {
-      sel.hidden = true;
-    });
-  }
-
-  function selectCard(card) {
-    deselectAll();
-    selectedTx    = card.dataset.tx;
-    selectedState = null;
-    card.classList.add('tx-card--selected');
-    card.setAttribute('aria-checked', 'true');
-
-    // Show state selector if needed
-    if (STATE_REQUIRED.includes(selectedTx)) {
-      const sel = document.getElementById('state-' + selectedTx);
-      if (sel) {
-        sel.hidden = false;
-        // Reset any previously selected state btn
-        sel.querySelectorAll('.state-btn').forEach(function (b) {
-          b.classList.remove('state-btn--active');
-        });
-      }
-    }
-
-    updateContinue();
-  }
-
-  // Card click
-  cards.forEach(function (card) {
-    card.addEventListener('click', function () {
-      selectCard(card);
-    });
-    // Keyboard: Space / Enter
-    card.addEventListener('keydown', function (e) {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        selectCard(card);
-      }
-    });
-  });
-
-  // State button click (event delegation — prevents bubbling to card)
-  document.querySelectorAll('.state-btn').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation(); // don't re-trigger card selection
-      const tx = btn.dataset.tx;
-      const st = btn.dataset.state;
-
-      // Deactivate siblings
-      const parent = btn.closest('.state-selector');
-      parent.querySelectorAll('.state-btn').forEach(function (b) {
-        b.classList.remove('state-btn--active');
-      });
-
-      btn.classList.add('state-btn--active');
-      selectedTx    = tx;
-      selectedState = st;
-      updateContinue();
-    });
-  });
-
-  // Form submit guard
-  document.getElementById('pickerForm').addEventListener('submit', function (e) {
-    if (!selectedTx) {
-      e.preventDefault();
-      continueHint.textContent = 'Please select a transaction type.';
-      return;
-    }
-    if (STATE_REQUIRED.includes(selectedTx) && !selectedState) {
-      e.preventDefault();
-      continueHint.textContent = 'Please select your state to continue.';
-    }
-  });
-
-  updateContinue();
-}());
-</script>
+</div>
 {% endblock %}

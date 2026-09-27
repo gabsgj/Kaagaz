@@ -1,82 +1,63 @@
-<!DOCTYPE html>
+{% import "_icons.html" as ico %}<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Kaagaz — Get your documents in order{% endblock %}</title>
+  <title>{% block title %}Kaagaz — research any Indian banking document requirement{% endblock %}</title>
+  <meta name="description" content="Ask about any Indian banking, loan or document transaction. Kaagaz researches it live, shows every step in order with costs and who regulates it, and cites the sources it actually read." />
+  <meta name="color-scheme" content="light" />
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/main.css" />
 </head>
-<body class="page-wrapper">
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- ═══════════════════════ HEADER ═══════════════════════ -->
-  <header class="site-header">
-    <div class="site-header__inner">
-      <div class="site-header__logo-group">
-        <a href="/" class="site-header__logo-link">
-          <span class="site-header__logo-word">Kaagaz</span>
-        </a>
-        <span class="site-header__tagline">Get your Kaagaz in order.</span>
-      </div>
-
-      <!-- Stamp-seal SVG accent -->
-      <div class="site-header__seal" aria-hidden="true">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Outer ring -->
-          <circle cx="24" cy="24" r="22" stroke="#B3402F" stroke-width="2" fill="none"/>
-          <!-- Inner ring -->
-          <circle cx="24" cy="24" r="17" stroke="#B3402F" stroke-width="1.2" fill="none"/>
-          <!-- Star in center -->
-          <polygon
-            points="24,13 25.76,19.26 32.18,19.26 27.04,23.06 28.8,29.32 24,25.52 19.2,29.32 20.96,23.06 15.82,19.26 22.24,19.26"
-            fill="#B3402F"
-          />
-          <!-- Text around inner ring: KAAGAZ -->
-          <text font-family="'Fraunces', serif" font-size="5" font-weight="600" fill="#B3402F" letter-spacing="2.6">
-            <textPath href="#sealPath">KAAGAZ · KAAGAZ</textPath>
-          </text>
-          <defs>
-            <path id="sealPath" d="M 24,24 m -14.5,0 a 14.5,14.5 0 1,1 29,0 a 14.5,14.5 0 1,1 -29,0"/>
-          </defs>
-        </svg>
-      </div>
+  <!-- ═══════════ MASTHEAD ═══════════ -->
+  <header class="masthead">
+    <div class="shell masthead__inner">
+      <a href="/" class="wordmark" aria-label="Kaagaz — home">
+        {{ ico.icon('seal', 28, cls='wordmark__seal') }}
+        <span class="wordmark__text">Kaagaz</span>
+      </a>
+      <nav class="masthead__nav" aria-label="Primary">
+        <a href="/" class="masthead__link">New question</a>
+        <a href="/about" class="masthead__link">How it works</a>
+      </nav>
     </div>
   </header>
+  <div class="torn" aria-hidden="true"></div>
 
-  <!-- Torn-paper edge between header and content -->
-  <div class="torn-edge" aria-hidden="true"></div>
-
-  <!-- ═══════════════════════ FLASH MESSAGES ═══════════════════════ -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="flash-container">
-        {% for category, message in messages %}
-          <div class="flash flash--{{ category }}">{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
-
-  <!-- ═══════════════════════ MAIN CONTENT ═══════════════════════ -->
-  <main class="site-main">
+  <main class="site-main" id="main">
     {% block content %}{% endblock %}
   </main>
 
-  <!-- ═══════════════════════ FOOTER ═══════════════════════ -->
-  <footer class="site-footer">
-    <div class="site-footer__inner">
-      <p class="site-footer__disclaimer">
-        Kaagaz is an informational prototype, not legal or financial advice.
-        Verify all requirements with your bank or registrar office before relying on this information.
+  <div class="torn torn--up" aria-hidden="true"></div>
+
+  <!-- ═══════════ COLOPHON ═══════════ -->
+  <footer class="colophon">
+    <div class="shell colophon__inner">
+      <p class="colophon__note">
+        Kaagaz is an informational research tool, not legal or financial advice.
+        Every answer is assembled from public sources at the time you ask, and
+        figures change — rates move weekly and state fees are revised by
+        notification. Check anything material with your bank, your
+        sub-registrar, or a qualified professional before you act on it.
       </p>
-      <p class="site-footer__copy">
-        &copy; 2025 Kaagaz &nbsp;·&nbsp; Made with IBM Bob 2.0
-      </p>
+      <div class="colophon__meta">
+        <span>© 2026 Kaagaz</span>
+        <span class="colophon__sep" aria-hidden="true">·</span>
+        <span>Built with IBM Bob 2.0</span>
+        <span class="colophon__sep" aria-hidden="true">·</span>
+        <a href="/about" class="colophon__link">How it works</a>
+      </div>
     </div>
   </footer>
 
   <script src="/static/js/flipboard.js" defer></script>
+  <script src="/static/js/checklist.js" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

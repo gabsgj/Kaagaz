@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Kaagaz — researching {{ request.transaction_type }}{% endblock %}
+
+{% block content %}
+<div class="shell shell--narrow" id="researchRoot"
+     data-transaction="{{ request.transaction_type }}"
+     data-bank="{{ request.bank }}"
+     data-residency="{{ request.residency }}"
+     data-state="{{ request.state }}">
+
+  <div class="result-head">
+    <a href="/" class="link-btn link-btn--quiet no-print" style="align-self:flex-start">
+      &larr; Ask a different question
+    </a>
+    <div class="result-head__row">
+      <h1 class="result-head__title">{{ request.transaction_type }}</h1>
+      {% if request.bank %}<span class="provenance__badge">{{ request.bank }}</span>{% endif %}
+      {% if request.state %}<span class="provenance__badge">{{ request.state }}</span>{% endif %}
+    </div>
+    <p class="result-head__summary" id="researchQuestion">
+      Not in the cache. Researching it now, live.
+    </p>
+  </div>
+
+  <!-- ══════════ The board turns into the research log ══════════
+       Same component, different face. Everything on it is real:
+       the stage names come from the pipeline, the pills are the
+       source URLs the search step actually returned. -->
+  <div class="board board--working" id="board" role="status" aria-live="polite">
+    <div class="board__left" style="flex:1 1 auto">
+      <span class="board__label" id="boardLabel">Researching live</span>
+      <!-- #ticker is the root the flip-board Ticker binds to, so the source
+           pills MUST live inside it — it locates them with querySelector and
+           silently does nothing if they are a sibling. -->
+      <div class="ticker" id="ticker">
+        <div class="ticker__line">
+          <span class="ticker__pulse" aria-hidden="true"></span>
+          <span class="ticker__text" data-ticker-text>Starting…</span>
+        </div>
+        <div class="found" data-ticker-found aria-hidden="true"></div>
+      </div>
+    </div>
+    <div class="board__right">
+      <span class="board__pct" id="elapsed">0s</span>
+      <div class="board__track"><div class="board__fill" id="boardFill"></div></div>
+    </div>
+  </div>
+
+  <div class="notice notice--info" style="margin-bottom:24px">
+    {{ ico.icon('info', 20, cls='notice__icon') }}
+    <span>
+      This is a cold query, so Kaagaz is searching the web and reading what it
+      finds before it can answer. The log above updates as the research
+      progresses &mdash; nothing on it is simulated. Ask this same question
+      again and it will answer instantly from the cache.
+    </span>
+  </div>
+
+  <div class="void" id="researchFailed" hidden>
+    <div class="void__art">{{ ico.icon('alert', 56) }}</div>
+    <p class="void__text" id="failureMessage"></p>
+    <div class="void__actions">
+      <button type="button" class="btn btn--primary" id="retryBtn">Try again</button>
+      <a href="/" class="btn btn--quiet">Ask something else</a>
+    </div>
+  </div>
+
+  <!-- Result replaces this whole block when the research lands. -->
+  <div id="resultSlot" hidden></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// flipboard.js and checklist.js are loaded with `defer`, so they have not run
+// yet at parse time. Wait for them.
+window.addEventListener('DOMContentLoaded', function () {
+(function () {
+  'use strict';
+
+  var root    = document.getElementById('researchRoot');
+  var failBox = document.getElementById('researchFailed');
+  var failMsg = document.getElementById('failureMessage');
+  var retry   = document.getElementById('retryBtn');
+  var label   = document.getElementById('boardLabel');
+  var fill    = document.getElementById('boardFill');
+  var elapsed = document.getElementById('elapsed');
+  var ticker  = window.KaagazFlip.ticker('#ticker');
+
+  var request_ = {
+    transaction_type: root.dataset.transaction,
+    bank:             root.dataset.bank,
+    residency:        root.dataset.residency,
+    state:            root.dataset.state
+  };
+
+  // The board label is deliberately static. An earlier version drove it from a
+  // client-side phase guess while the ticker line showed the server's real
+  // stage, so the two disagreed on screen ("READING SOURCES" next to
+  // "Building your checklist"). Only the ticker states a stage; only the
+  // server knows what it actually is.
+  function setElapsed(seconds) {
+    elapsed.textContent = Math.round(seconds) + 's';
+    fill.style.width = Math.min(95, (seconds / 26) * 100) + '%';
+  }
+
+  function showFailure(message) {
+    failMsg.textContent = message;
+    failBox.hidden = false;
+    fill.style.width = '0%';
+    if (ticker) ticker.say('Could not complete this research');
+  }
+
+  function loadResult() {
+    // Re-request the page. The answer is cached now, so this is the fast path
+    // — and it is literally the same code a returning visitor gets.
+    var qs = new URLSearchParams(request_);
+    fetch('/checklist?' + qs.toString() + '&just=1')
+      .then(function (res) { return res.text(); })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var fresh = doc.getElementById('resultRoot');
+        if (!fresh) throw new Error('Could not render the result.');
+        // Swap the whole node rather than innerHTML, so every id and data
+        // attribute on the result page stays unique and intact.
+        root.parentNode.replaceChild(
+          document.importNode(fresh, true),
+          root
+        );
+        root = document.getElementById('resultRoot');
+        if (window.KaagazInitChecklist) window.KaagazInitChecklist(root);
+        globalThis.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(function () {
+        showFailure('The research finished but the result could not be shown. ' +
+                    'Please reload the page.');
+      });
+  }
+
+  function run() {
+    failBox.hidden = true;
+    if (ticker) { ticker.clear(); ticker.say('Starting…'); }
+    setElapsed(0);
+
+    var started = Date.now();
+    var poll = window.KaagazFlip.research(function (evt) {
+      if (evt.phase === 'starting') { ticker.say('Starting the research job'); return; }
+      if (evt.phase === 'running') {
+        if (evt.stage) ticker.say(evt.stage, evt.detail);
+        if (typeof evt.elapsed === 'number') setElapsed(evt.elapsed);
+        return;
+      }
+      if (evt.phase === 'citations' && ticker) {
+        ticker.found(evt.citations.map(function (c) {
+          return typeof c === 'string' ? c : (c.url || '');
+        }));
+        return;
+      }
+      if (evt.phase === 'tick') {
+        setElapsed((Date.now() - started) / 1000);
+      }
+    });
+
+    poll.start(request_)
+      .then(function () {
+        if (ticker) ticker.say('Research complete — filing the record');
+        fill.style.width = '100%';
+        setTimeout(loadResult, 500);
+      })
+      .catch(function (err) {
+        showFailure(
+          (err && err.message) ||
+          'We could not complete this research right now. Please try again.'
+        );
+      });
+  }
+
+  retry.addEventListener('click', run);
+  run();
+}());
+});
+</script>
+{% endblock %}

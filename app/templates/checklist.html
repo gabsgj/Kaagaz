@@ -1,272 +1,308 @@
 {% extends "base.html" %}
-{% block title %}Kaagaz — {{ transaction_label }}{% if state_label %} · {{ state_label }}{% endif %}{% endblock %}
+{% import "_icons.html" as ico %}
+{% block title %}Kaagaz — {{ request_summary }}{% endblock %}
 
 {% block content %}
-<section class="checklist-section">
+<div class="shell shell--narrow" id="resultRoot"
+     data-transaction="{{ request.transaction_type }}"
+     data-bank="{{ request.bank }}"
+     data-residency="{{ request.residency }}"
+     data-state="{{ request.state }}">
 
-  <!-- ─── Page header ─── -->
-  <div class="checklist-header">
-    <a href="/" class="back-link no-print">← Change transaction</a>
-    <h1 class="checklist-header__title">{{ transaction_label }}</h1>
-    {% if state_label %}
-      <span class="checklist-header__state-badge">{{ state_label }}</span>
+  <!-- ══════════════════════════════ HEADER ══════════════════════════════ -->
+  <div class="result-head">
+    <a href="/" class="link-btn link-btn--quiet no-print" style="align-self:flex-start">
+      &larr; Ask a different question
+    </a>
+
+    <div class="result-head__row">
+      <h1 class="result-head__title">{{ request.transaction_type }}</h1>
+      {% if request.bank %}<span class="provenance__badge">{{ request.bank }}</span>{% endif %}
+      {% if request.state %}<span class="provenance__badge">{{ request.state }}</span>{% endif %}
+    </div>
+
+    <p class="result-head__summary">{{ answer.summary }}</p>
+
+    <!-- Provenance: never present a researched figure as a guaranteed fact.
+         The wax seal belongs here — it sits on the block that certifies the
+         answer and its date, which is the only place a "sealed" metaphor
+         means something. -->
+    <div class="sealed">
+      <div class="sealed__provenance">
+        <div class="provenance">
+          <span class="provenance__badge {% if cache == 'hit' %}provenance__badge--live{% else %}provenance__badge--seed{% endif %}">
+            {% if cache == 'hit' %}
+              {{ ico.icon('check', 14) }} Cached answer
+            {% else %}
+              {{ ico.icon('search', 14) }} Freshly researched
+            {% endif %}
+          </span>
+          <span>Researched {{ as_of }}</span>
+          <span aria-hidden="true">·</span>
+          <span>{{ sources | length }} source{{ '' if sources | length == 1 else 's' }} read</span>
+          {% if model and model not in ('seed-research',) %}
+            <span aria-hidden="true">·</span>
+            <span>{{ model }}</span>
+          {% endif %}
+          {% if is_seed %}
+            <span aria-hidden="true">·</span>
+            <span>pre-warmed entry</span>
+          {% endif %}
+        </div>
+
+        {% if degraded %}
+          <div class="notice notice--warn" role="status">
+            {{ ico.icon('alert', 20, cls='notice__icon') }}
+            <span>{{ degraded }}</span>
+          </div>
+        {% endif %}
+      </div>
+      <div class="sealed__seal" aria-hidden="true">
+        {{ ico.wax_seal(56) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ BOARD ══════════════════════════════
+       Both counters are pinned to the same digit width as the total, server
+       side. Left at one digit, the "done" counter would grow a second cell the
+       moment the user reached 10 and shove the whole board sideways — exactly
+       the jitter the brief forbids, on the one component that will be the
+       centrepiece of the demo video. -->
+  <div class="board" id="board">
+    <div class="board__left">
+      <span class="board__label" id="boardLabel">Documents ready</span>
+      <div class="board__counter">
+        <span class="flip" id="doneCount" data-min="{{ total | string | length }}"
+              role="img" aria-label="0 of {{ total }} documents ready">0</span>
+        <span class="board__of" aria-hidden="true">of</span>
+        <span class="flip" id="totalCount" data-min="{{ total | string | length }}"
+              role="img" aria-label="{{ total }} documents in total">{{ total }}</span>
+      </div>
+    </div>
+    <div class="board__right">
+      <span class="board__pct" id="boardPct">0%</span>
+      <div class="board__track">
+        <div class="board__fill" id="boardFill"></div>
+      </div>
+      <span class="board__caption" id="boardCaption">0 of {{ total }} collected</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ MONEY ══════════════════════════════ -->
+  {% if answer.interest_rate_range or answer.processing_fee_note %}
+  <div class="bands">
+    {% if answer.interest_rate_range %}
+    <div class="band">
+      <span class="band__label">{{ ico.icon('rupee', 14) }} Interest rate band</span>
+      <span class="band__value">{{ answer.interest_rate_range }}</span>
+      <span class="band__note">Your rate depends on credit score, amount and tenure.</span>
+    </div>
+    {% endif %}
+    {% if answer.processing_fee_note %}
+    <div class="band">
+      <span class="band__label">{{ ico.icon('card', 14) }} Processing fee</span>
+      <span class="band__note">{{ answer.processing_fee_note }}</span>
+    </div>
     {% endif %}
   </div>
+  {% endif %}
 
-  <!-- ─── Flip-board progress counter ─── -->
-  <div class="progress-board" id="progressBoard">
-    <div class="progress-board__label">Documents Ready</div>
-    <div class="progress-board__counter">
-      <span class="flip-number" id="doneCount" data-value="0">0</span>
-      <span class="progress-board__sep">of</span>
-      <span class="flip-number" id="totalCount" data-value="{{ total }}">{{ total }}</span>
-    </div>
-    <div class="progress-board__pct" id="progressPct">0%</div>
+  {% if answer.regulatory_note %}
+  <div class="notice notice--info" style="margin-bottom:24px">
+    {{ ico.icon('book', 20, cls='notice__icon') }}
+    <span><strong>Who regulates what.</strong> {{ answer.regulatory_note }}</span>
   </div>
+  {% endif %}
 
-  <!-- ─── Actions bar ─── -->
-  <div class="checklist-actions no-print">
-    <button class="btn btn--outline btn--sm" onclick="window.print()">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px">
-        <rect x="2" y="5" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.4" fill="none"/>
-        <path d="M4 5V2h8v3" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-        <rect x="4" y="9" width="8" height="4" rx="0.5" fill="currentColor" opacity="0.25"/>
-        <circle cx="12" cy="7.5" r="0.8" fill="currentColor"/>
-      </svg>
-      Print / Save PDF
-    </button>
-  </div>
-
-  <!-- ─── Checklist items ─── -->
-  <div class="checklist-list" id="checklistList">
-    {% for item in items %}
-    <div
-      class="checklist-item"
-      data-item-id="{{ item.id }}"
-      data-source="{{ item.regulatory_source }}"
-    >
-      <!-- Top row: status badge + doc name -->
-      <div class="checklist-item__top">
-        <div class="flip-status" data-item-id="{{ item.id }}" data-state="pending">PENDING</div>
-        <div class="checklist-item__source-dot source-dot--{{ item.regulatory_source }}"
-             title="{{ item.regulatory_source | replace('_', ' ') | title }}"></div>
-        <h3 class="checklist-item__name">{{ item.document_name }}</h3>
-      </div>
-
-      <!-- Dependency notice -->
-      {% if item.depends_on %}
-        <div class="checklist-item__depends">
-          <span class="depends-icon">↳</span>
-          Requires: <strong>{{ item.depends_on }}</strong>
-        </div>
-      {% endif %}
-
-      <!-- Plain explanation -->
-      <p class="checklist-item__explanation">{{ item.plain_explanation }}</p>
-
-      <!-- Collapsed detail section -->
-      <div class="item-details" id="details-{{ item.id }}">
-        <dl class="item-details__grid">
-          <dt>Where to obtain</dt>
-          <dd>{{ item.where_to_obtain }}</dd>
-          <dt>Approx. cost</dt>
-          <dd>
-            {% if item.approx_cost_min is not none and item.approx_cost_max is not none %}
-              ₹{{ item.approx_cost_min | int | format_inr }} – ₹{{ item.approx_cost_max | int | format_inr }}
-            {% elif item.approx_cost_min is not none %}
-              ₹{{ item.approx_cost_min | int | format_inr }}
-            {% else %}
-              Varies / Free
-            {% endif %}
-          </dd>
-          <dt>Approx. time</dt>
-          <dd>{{ item.approx_time_days }} day{{ 's' if item.approx_time_days != 1 else '' }}</dd>
-          <dt>Source</dt>
-          <dd class="source-note">{{ item.source_note }}</dd>
-        </dl>
-      </div>
-
-      <!-- Action buttons row -->
-      <div class="checklist-item__actions no-print">
-        <button
-          class="btn-link explain-btn"
-          data-term="{{ item.document_name }}"
-          data-tx-type="{{ transaction_type }}"
-          data-item-id="{{ item.id }}"
-        >What is this?</button>
-
-        <button
-          class="details-toggle btn--text-sm"
-          data-target="details-{{ item.id }}"
-          aria-expanded="false"
-        >Show details ▾</button>
-
-        <button
-          class="btn btn--done mark-done-btn"
-          data-item-id="{{ item.id }}"
-        >Mark as done</button>
-      </div>
-
-      <!-- AI explainer box -->
-      <div class="ai-explainer" id="explainer-{{ item.id }}">
-        <div class="ai-explainer__content">Consulting the Kaagaz knowledge base&hellip;</div>
-        <div class="ai-source-note" id="explainer-note-{{ item.id }}"></div>
-      </div>
-
-    </div><!-- /checklist-item -->
+  <!-- ══════════════════════════════ LEGEND ══════════════════════════════ -->
+  <div class="legend" style="margin-bottom:24px">
+    {% for key, label in gov_labels.items() %}
+      <span class="legend__item">
+        <span class="legend__swatch legend__swatch--{{ key }}">{{ ico.icon(gov_icons.get(key, 'book'), 16) }}</span>
+        {{ legend_labels.get(key, label) }}
+      </span>
     {% endfor %}
   </div>
 
+  <!-- ══════════════════════════════ STEPS ══════════════════════════════ -->
+  <div class="rule-head">
+    <h2 class="h3">{{ total }} step{{ '' if total == 1 else 's' }}, in the order you do them</h2>
+    <span class="meta-sm no-print">Tick as you collect &middot; progress saves in this browser</span>
+  </div>
+
+  <ol class="steps" id="steps">
+    {% for item in items %}
+    <li class="step"
+        data-item-id="{{ loop.index0 }}"
+        data-source="{{ item.regulatory_source }}"
+        data-status="pending">
+
+      <div class="step__head">
+        <span class="step__num">{{ '%02d' % loop.index }}</span>
+        <h3 class="step__title">{{ item.document_name }}</h3>
+        <div class="step__head-aside">
+          <span class="status" data-item-id="{{ loop.index0 }}" data-state="pending">Pending</span>
+        </div>
+      </div>
+
+      <div class="step__body">
+        <span class="step__gov">
+          <span class="step__gov-mark" data-src="{{ item.regulatory_source }}">
+            {{ ico.icon(gov_icons.get(item.regulatory_source, 'book'), 16) }}
+          </span>
+          {{ gov_labels.get(item.regulatory_source, item.regulatory_source) }}
+        </span>
+
+        {% if item.plain_explanation %}
+          <p class="step__why">{{ item.plain_explanation }}</p>
+        {% endif %}
+
+        {% if item.depends_on %}
+          <p class="step__depends">
+            {{ ico.icon('link', 14) }}
+            <span>Needs <strong>{{ item.depends_on }}</strong> first</span>
+          </p>
+        {% endif %}
+
+        <dl class="step__facts">
+          <dt>Where to get it</dt>
+          <dd>{{ item.where_to_obtain }}</dd>
+
+          <dt>Cost</dt>
+          <dd>
+            {% if item.approx_cost_min is not none and item.approx_cost_max is not none %}
+              {% if item.approx_cost_min == item.approx_cost_max %}
+                {{ 'Free' if item.approx_cost_min == 0 else '₹' ~ item.approx_cost_min | int | format_inr }}
+              {% else %}
+                ₹{{ item.approx_cost_min | int | format_inr }} &ndash; ₹{{ item.approx_cost_max | int | format_inr }}
+              {% endif %}
+            {% elif item.approx_cost_min is not none %}
+              {{ 'Free' if item.approx_cost_min == 0 else '₹' ~ item.approx_cost_min | int | format_inr }}
+            {% else %}
+              Not published &mdash; ask the bank
+            {% endif %}
+          </dd>
+
+          <dt>Typical time</dt>
+          <dd>
+            {% if item.approx_time_days is not none %}
+              {{ item.approx_time_days }} day{{ '' if item.approx_time_days == 1 else 's' }}
+            {% else %}
+              Varies
+            {% endif %}
+          </dd>
+
+          {% if item.source_note %}
+            <dt>Source</dt>
+            <dd class="meta-sm">{{ item.source_note }}</dd>
+          {% endif %}
+        </dl>
+
+        <div class="step__actions no-print">
+          <button type="button" class="btn btn--quiet btn--sm step__advance"
+                  data-item-id="{{ loop.index0 }}">
+            Start
+          </button>
+          <button type="button" class="link-btn step__explain"
+                  data-item-id="{{ loop.index0 }}"
+                  data-term="{{ item.document_name }}"
+                  data-tx="{{ request.transaction_type }}"
+                  aria-expanded="false">
+            {{ ico.icon('search', 16) }} Why is this needed?
+          </button>
+        </div>
+
+        <div class="notice notice--info step__answer" id="answer-{{ loop.index0 }}"
+             hidden aria-live="polite"></div>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+
   {% if not items %}
-    <div class="empty-state">
-      <p>No checklist items found for this transaction and state combination.</p>
-      <a href="/" class="btn btn--primary">← Back to picker</a>
+    <div class="void">
+      <div class="void__art">{{ ico.icon('book', 56) }}</div>
+      <p class="void__text">
+        We could not build a checklist for that combination. Try naming the
+        transaction more specifically &mdash; "home loan" rather than "loan".
+      </p>
+      <div class="void__actions">
+        <a href="/" class="btn btn--primary">Ask again</a>
+      </div>
     </div>
   {% endif %}
 
-</section>
+  <!-- ══════════════════════════════ DISCLOSURES ══════════════════════════════ -->
+  {% if answer.disclosures %}
+  <div class="sources-block">
+    <div class="rule-head">
+      <h2 class="h3">What we could not confirm</h2>
+    </div>
+    <div class="sheet sheet--pad">
+      <ul class="sources">
+        {% for note in answer.disclosures %}
+        <li class="sources__item">
+          <span class="sources__index" aria-hidden="true">&mdash;</span>
+          <span>{{ note }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
 
-<script>
-(function () {
-  'use strict';
+  <!-- ══════════════════════════════ SOURCES ══════════════════════════════ -->
+  {% if sources %}
+  <div class="sources-block">
+    <div class="rule-head">
+      <h2 class="h3">Sources read for this answer</h2>
+      <span class="meta-sm">{{ sources | length }} of them</span>
+    </div>
+    <div class="sheet sheet--pad">
+      <ol class="sources">
+        {% for source in sources %}
+        <li class="sources__item">
+          <span class="sources__index" aria-hidden="true">{{ '%02d' % loop.index }}</span>
+          <span>
+            {% if source.url %}
+              <a class="sources__link" href="{{ source.url }}" target="_blank" rel="noopener noreferrer">
+                {{ source.title or source.url }}
+              </a>
+              <span class="sources__host">{{ source.host or '' }}</span>
+            {% else %}
+              {{ source.title }}
+            {% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  {% endif %}
 
-  /* ─── Utilities ─── */
-  function qs(sel, ctx)  { return (ctx || document).querySelector(sel); }
-  function qsa(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
+  <!-- ══════════════════════════════ RESEARCH RECORD ══════════════════════════════ -->
+  <details class="sources-block" style="margin-top:32px">
+    <summary class="link-btn" style="cursor:pointer">
+      {{ ico.icon('layers', 16) }} Show the exact research record
+    </summary>
+    <div class="sheet sheet--pad" style="margin-top:16px">
+      <dl class="step__facts" style="margin:0;border:0;padding:0">
+        <dt>Researched</dt><dd>{{ researched_at }}</dd>
+        <dt>Cache key</dt><dd><code style="font-family:var(--mono);font-size:12px">{{ request.cache_key }}</code></dd>
+        <dt>Query sent</dt><dd>{{ research_query }}</dd>
+        {% if model %}<dt>Search model</dt><dd>{{ model }}</dd>{% endif %}
+        <dt>Re-researched after</dt><dd>{{ ttl_days }} days</dd>
+      </dl>
+    </div>
+  </details>
 
-  /* ─── FlipNumber: forward-declared here for inline use (flipboard.js also defines it globally) ─── */
-  // flipboard.js is loaded via <script defer> in base.html, so it is guaranteed
-  // to be available by DOMContentLoaded. We'll call window.KaagazFlip below.
+  <!-- ══════════════════════════════ TALLY ══════════════════════════════ -->
+  <div class="tally" id="tally">
+    <span class="tally__label" id="tallyLabel">0 of {{ total }} ready</span>
+    <div class="tally__track"><div class="tally__fill" id="tallyFill"></div></div>
+    <span class="tally__pct" id="tallyPct">0%</span>
+  </div>
 
-  /* ─── State management ─── */
-  var itemStates = {}; // item-id → 'pending' | 'in_progress' | 'done'
-  qsa('.checklist-item').forEach(function (item) {
-    itemStates[item.dataset.itemId] = 'pending';
-  });
-
-  function countDone() {
-    return Object.values(itemStates).filter(function (s) { return s === 'done'; }).length;
-  }
-
-  function updateProgressBoard() {
-    var done  = countDone();
-    var total = parseInt(qs('#totalCount').dataset.value, 10);
-    var pct   = total > 0 ? Math.round((done / total) * 100) : 0;
-
-    if (window.KaagazFlip) {
-      window.KaagazFlip.animateNumber('doneCount', done);
-    } else {
-      qs('#doneCount').textContent = done;
-    }
-    qs('#progressPct').textContent = pct + '%';
-  }
-
-  /* ─── Mark-done buttons ─── */
-  var STATE_CYCLE = ['pending', 'in_progress', 'done'];
-
-  qsa('.mark-done-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.dataset.itemId;
-      var cur = itemStates[id] || 'pending';
-      var next = STATE_CYCLE[(STATE_CYCLE.indexOf(cur) + 1) % STATE_CYCLE.length];
-      itemStates[id] = next;
-
-      // Animate flip-status badge
-      var badge = qs('.flip-status[data-item-id="' + id + '"]');
-      if (badge && window.KaagazFlip) {
-        window.KaagazFlip.transitionStatus(badge, next);
-      } else if (badge) {
-        badge.dataset.state = next;
-        badge.textContent = { pending:'PENDING', in_progress:'IN PROGRESS', done:'DONE' }[next];
-      }
-
-      // Strikethrough item name if done
-      var nameEl = qs('[data-item-id="' + id + '"] .checklist-item__name');
-      if (nameEl) {
-        nameEl.style.textDecoration = next === 'done' ? 'line-through' : '';
-        nameEl.style.opacity        = next === 'done' ? '0.55' : '';
-      }
-
-      // Update button label
-      btn.textContent = { pending: 'Mark as done', in_progress: 'Mark as done', done: 'Undo' }[next];
-
-      updateProgressBoard();
-    });
-  });
-
-  /* ─── Details toggle ─── */
-  qsa('.details-toggle').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var targetId = btn.dataset.target;
-      var panel    = document.getElementById(targetId);
-      if (!panel) return;
-      var expanded = panel.classList.toggle('expanded');
-      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      btn.textContent = expanded ? 'Hide details ▴' : 'Show details ▾';
-    });
-  });
-
-  /* ─── AI Explainer ─── */
-  qsa('.explain-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id    = btn.dataset.itemId;
-      var term  = btn.dataset.term;
-      var txType= btn.dataset.txType;
-      var box   = document.getElementById('explainer-' + id);
-      var noteEl= document.getElementById('explainer-note-' + id);
-      var contentEl = qs('.ai-explainer__content', box);
-
-      if (!box) return;
-
-      // Toggle: if already visible, hide it
-      if (box.classList.contains('visible')) {
-        box.classList.remove('visible');
-        btn.textContent = 'What is this?';
-        return;
-      }
-
-      // Show loading state
-      box.classList.remove('loaded');
-      box.classList.add('visible', 'loading');
-      contentEl.textContent = 'Consulting the Kaagaz knowledge base\u2026';
-      noteEl.textContent = '';
-      btn.textContent = 'Hide explanation';
-
-      fetch('/api/ai/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ term: term, transaction_type: txType })
-      })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        box.classList.remove('loading');
-        box.classList.add('loaded');
-        contentEl.textContent = data.explanation || 'No explanation available.';
-        if (data.source === 'static_fallback') {
-          noteEl.textContent = 'Live AI explanation temporarily unavailable — showing database entry.';
-        } else {
-          noteEl.textContent = '';
-        }
-      })
-      .catch(function () {
-        box.classList.remove('loading');
-        contentEl.textContent = 'Unable to load explanation. Please try again.';
-        noteEl.textContent = '';
-      });
-    });
-  });
-
-  /* ─── Init progress board total ─── */
-  (function initTotal() {
-    var totalEl = qs('#totalCount');
-    if (totalEl && window.KaagazFlip) {
-      window.KaagazFlip.animateNumber('totalCount', parseInt(totalEl.dataset.value, 10));
-    }
-  }());
-
-}());
-</script>
+</div>
 {% endblock %}
