@@ -5,12 +5,12 @@ const puppeteer = require('puppeteer-core');
   const b = await puppeteer.launch({ executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless:'new', args:['--no-sandbox'] });
   const p = await b.newPage();
   await p.setViewport({ width: 1280, height: 900 });
-  await p.goto((process.env.BASE_URL || 'http://127.0.0.1:5099') + '/', { waitUntil: 'networkidle0' });
+  await p.goto('http://127.0.0.1:5000/', { waitUntil: 'networkidle0' });
   const chips = await p.$$eval('.chips a.chip', as => as.map(a => ({ href: a.getAttribute('href'), label: a.textContent.trim() })));
   console.log(`${chips.length} example chips found\n`);
   let ok = 0;
   for (const c of chips) {
-    await p.goto((process.env.BASE_URL || 'http://127.0.0.1:5099') + c.href.replace(/&amp;/g, '&'), { waitUntil: 'domcontentloaded' });
+    await p.goto('http://127.0.0.1:5000' + c.href.replace(/&amp;/g, '&'), { waitUntil: 'domcontentloaded' });
     const r = await p.evaluate(() => ({
       working: !!document.querySelector('.board--working'),
       steps: document.querySelectorAll('.step').length,

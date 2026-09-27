@@ -1,0 +1,98 @@
+name: Deploy to Vercel
+
+# Deploys on every push to main, and on demand.
+#
+# Two secrets are required, both in the repository's Actions secrets
+# (Settings -> Secrets and variables -> Actions):
+#
+#   VERCEL_TOKEN          a Vercel access token
+#                         (vercel.com/account/tokens)
+#   VERCEL_ORG_ID         the team id under Settings -> General
+#   VERCEL_PROJECT_ID     the project id under Project -> Settings
+#
+# The workflow is intentionally a no-op-safe one: if the secrets are absent the
+# deploy step simply does not run, so a fork never fails CI for missing
+# credentials.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    # Runs everywhere, with or without deploy credentials. Proves the app still
+    # imports, the database comes up fully schema'd, and the suite is green
+    # before anything is published.
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+
+      - name: Test suite (no network, no API keys required)
+        run: pytest tests/ -q
+
+      - name: App boots and the database comes up fully schema'd
+        run: |
+          python - <<'PY'
+          import sqlite3, os, tempfile
+          from app import create_app
+          # A brand-new database path, exactly like a cold serverless start.
+          tmp = tempfile.mkdtemp()
+          os.environ['DATABASE_PATH'] = os.path.join(tmp, 'kaagaz.db')
+          app = create_app()
+          tables = {r[0] for r in sqlite3.connect(app.config['DATABASE']).execute(
+              "SELECT name FROM sqlite_master WHERE type='table'")}
+          assert 'research_cache' in tables, tables
+          assert 'checklist_items' in tables, tables
+          print('tables:', sorted(tables))
+          c = app.test_client()
+          for url in ('/', '/about', '/api/research/health'):
+              r = c.get(url)
+              assert r.status_code == 200, (url, r.status_code)
+              print('ok', url)
+          # Every demo case must answer from cache with no API keys at all.
+          from app.checklist.routes import EXAMPLES
+          for tx, bank, res, state, label, _ in EXAMPLES:
+              parts = ['transaction_type=' + tx.replace(' ', '+'),
+                       'bank=' + bank.replace(' ', '+'), 'residency=' + res]
+              if state:
+                  parts.append('state=' + state.replace(' ', '+'))
+              r = c.get('/checklist?' + '&'.join(parts))
+              assert r.status_code == 200, (label, r.status_code)
+              assert b'Documents ready' in r.data, label
+              assert b'board--working' not in r.data, (
+                  '%s fell through to the researching view' % label)
+          print('all %d demo cases served from cache' % len(EXAMPLES))
+          PY
+
+  deploy:
+    name: Deploy
+    needs: smoke
+    runs-on: ubuntu-latest
+    if: ${{ vars.VERCEL_PROJECT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Deploy
+        run: npx --yes vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}

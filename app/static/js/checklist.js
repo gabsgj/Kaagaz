@@ -209,10 +209,89 @@
   }
 
   global.KaagazInitChecklist = mount;
+  global.KaagazKeyboard = wireKeyboard;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { mount(); });
   } else {
     mount();
+  }
+
+  /* Keyboard shortcuts.
+   *
+   * `/` or Cmd/Ctrl-K focuses the search field, because the whole point of the
+   * page is that you can ask about anything and the most likely next action is
+   * typing. Escape blurs it again. Arrow keys walk the example chips and Enter
+   * follows the focused one.
+   *
+   * Every handler is a no-op when the user is already typing, and none of them
+   * steal a key from a modifier the browser or the OS needs. Arrow navigation is
+   * suppressed while the search input has focus, because there the caret must
+   * keep doing what the user expects.
+   */
+  function wireKeyboard() {
+    if (document.body.dataset.keyboardWired === '1') return;
+    document.body.dataset.keyboardWired = '1';
+
+    var search = document.getElementById('transaction_type');
+
+    document.addEventListener('keydown', function (e) {
+      // True whenever the caret is in a field the user is typing into. Every
+      // shortcut below defers to it, otherwise the app eats characters: pressing
+      // "/" in the search box has to type a slash, not clear the box.
+      var typing = isTextEntry(document.activeElement);
+
+      // Cmd/Ctrl-K, or "/" on a US layout, jump to the search field, because
+      // the whole point of the page is that you can ask about anything and the
+      // most likely next action is typing. Cmd-K still works while typing,
+      // since that combination is never text.
+      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (search) { search.focus(); search.select(); }
+        return;
+      }
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !typing) {
+        e.preventDefault();
+        if (search) { search.focus(); search.select(); }
+        return;
+      }
+      if (e.key === 'Escape' && document.activeElement === search && search) {
+        search.blur();
+        return;
+      }
+
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' &&
+          e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      if (typing) return;                                  // let the caret move
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      var chips = Array.prototype.slice.call(document.querySelectorAll('.chips .chip'));
+      if (!chips.length) return;
+      e.preventDefault();
+
+      var current = chips.indexOf(document.activeElement);
+      var forward = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+      var next = current === -1
+        ? (forward ? 0 : chips.length - 1)
+        : (current + (forward ? 1 : -1) + chips.length) % chips.length;
+      chips[next].focus();
+    });
+  }
+
+  function isTextEntry(el) {
+    if (!el || !el.tagName) return false;
+    var tag = el.tagName.toLowerCase();
+    if (tag === 'input') {
+      var type = (el.getAttribute('type') || 'text').toLowerCase();
+      return ['text', 'search', 'url', 'email', 'tel', 'password', 'number']
+        .indexOf(type) !== -1;
+    }
+    return tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireKeyboard);
+  } else {
+    wireKeyboard();
   }
 
 }(window));

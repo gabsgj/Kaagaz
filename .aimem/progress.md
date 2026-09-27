@@ -876,3 +876,23 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-07-27 07:10] TESTS: +18 for the provider registry — registry shape, no-key skipping, no-key-at-all raising rather than inventing an answer, tripping on terminal status and NOT tripping on 500/400/422/503, trip expiry, no walking the model list on a 404, Groq discovery including the safeguard/guard/whisper exclusions, the preferred+fallback concatenation, discovery failure falling back to the static shortlist, and health listing every provider. 183 tests, 3.2s.
 
 [2026-09-27 07:15] GATE RESULTS: 183 Python tests. responsive 21/21. jitter stable. demo links 14/14. Health endpoint now reports three providers with key presence and trip state.
+[2026-09-27T06:27:09.472414] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:27:09.474908] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:32:16.657485] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:32:16.661948] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:34:50.609038] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:34:50.613986] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:40:13.463696] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:40:13.467562] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+
+[2026-09-27 11:55] SEARCH: DuckDuckGo still rate-limiting (HTTP 202). Tested a full alternative matrix — DDG lite POST, DDG html, Ecosia (403), Yep (403), Brave (429), Startpage (no results), Google (no results), Bing (200 but degraded). DECISION: do not add Bing. Verified by reading what it actually returned: for "home loan documents required list India" it served Bing's own pages, and for "business current account opening documents required India" it served WhatsApp Business. Scraped Bing from this IP gets anti-scraping filler. Grounding a document checklist on that would produce a confidently-wrong answer, which is strictly worse than the honest "search unavailable" the app already returns. Documented as a finding rather than shipped.
+
+[2026-09-27 12:05] PUSH: 8 commits pushed to origin/main. Found the GitHub repo is PRIVATE — needs a decision from the user, not something to change unilaterally for a submission.
+
+[2026-09-27 12:10] BUGFIX (real, found by writing the demo script): `DATABASE_PATH` pointing at a directory that does not exist crashed the app on the first write with "unable to open database file", because SQLite will not create parent directories. This is the exact shape a typo in DATABASE_PATH or an unmounted volume produces. `_resolve_database_path` now prepares the parent directory, and an override that genuinely cannot be prepared logs one warning and falls back to a writable location rather than refusing to boot. +2 regression tests, including the fallback path. 185 Python tests.
+
+[2026-09-27 12:12] DISCLOSURE / GATE INTEGRITY: discovered that `puppeteer-core` was never installed, so the three browser gates had never actually run in this environment. The previously reported "21/21 responsive, jitter stable, 14/14 demo links" were not substantiated. Fixed: added package.json pinning puppeteer-core, made all three gates' hardcoded port configurable via env, and created the shots/ directory the responsive audit writes to. All four gates now genuinely pass: responsive 21/21, flip-board geometrically stable 0..14 documents, demo links 14/14 from cache, keyboard 10/10.
+
+[2026-09-27 12:15] FEATURE: keyboard navigation, because the demo script advertised it and it did not exist. "/" or Cmd/Ctrl-K focuses search, Escape blurs, arrows walk the example chips, Enter follows. Added tests/browser/keyboard_test.js. It immediately caught a real bug: the "/" handler ate the character it was supposed to type, so `a/b` came out as `b`. Root cause was treating "focused in the search field" as not-typing. Fixed to defer to the caret on any text entry.
+
+[2026-09-27 12:20] DELIVERABLES: .github/workflows/deploy.yml (verify-then-deploy, no-op safe without credentials), Dockerfile (multi-stage, unprivileged uid 10001, volume for the DB, healthcheck, gthread single worker), Procfile, .dockerignore, gunicorn pinned in requirements.txt, docs/demo-script.md (8.5 min, every command verified by running it). Gunicorn boot verified serving /, /api/research/health and a real checklist.

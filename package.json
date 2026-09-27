@@ -1,0 +1,16 @@
+{
+  "name": "kaagaz-browser-gates",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Browser-level gates for Kaagaz: responsive breakpoints, flip-board stability, demo link coverage, keyboard navigation.",
+  "scripts": {
+    "gate:responsive": "node tests/browser/responsive_audit.js",
+    "gate:jitter": "node tests/browser/jitter_test.js",
+    "gate:demo": "node tests/browser/demo_links_test.js",
+    "gate:keyboard": "node tests/browser/keyboard_test.js",
+    "gates": "npm run gate:responsive && npm run gate:jitter && npm run gate:demo && npm run gate:keyboard"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.0.0"
+  }
+}

@@ -4,8 +4,10 @@ __pycache__/
 .env
 instance/
 *.sqlite3
+*.db
 .DS_Store
 .vscode/
 .idea/
 node_modules/
 *.log
+shots/

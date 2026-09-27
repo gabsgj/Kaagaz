@@ -1,8 +1,14 @@
 import os
 import tempfile
+import logging
 
 from flask import Flask
 from dotenv import load_dotenv
+
+# Module-level, because the database path is resolved before any Flask app
+# object exists to hang a logger off. Boot-time warnings are exactly the ones
+# that need to be visible, and they are visible by default at WARNING.
+app_logger = logging.getLogger('kaagaz')
 
 load_dotenv()
 
@@ -64,13 +70,26 @@ def _resolve_database_path(instance_path):
       4. an in-memory database — last resort, so the process still serves
          requests and reports its own degraded state rather than 500-ing.
 
+    An override only wins if its parent directory exists or can be created.
+    SQLite will not create missing parent directories, so returning an override
+    whose directory is absent makes the very first write fail with "unable to
+    open database file" — which is how a typo in DATABASE_PATH, or a volume that
+    has not been mounted yet, turns into a hard boot failure. A path that cannot
+    be prepared is not an override we can honour, so it falls through to the
+    normal chain and the app still comes up.
+
     This function must not create the file it returns; see _is_writable_dir.
     """
     global _TMP_DB
 
     override = os.environ.get('DATABASE_PATH', '').strip()
-    if override:
+    if override and _ensure_parent_dir(override):
         return override
+    if override:
+        app_logger.warning(
+            'DATABASE_PATH=%r is not usable (its directory is missing and could '
+            'not be created); falling back to a writable location instead of '
+            'failing to boot.', override)
 
     candidate = os.path.join(instance_path, 'kaagaz.db')
     if _is_writable_dir(instance_path):
@@ -82,6 +101,26 @@ def _resolve_database_path(instance_path):
 
     _TMP_DB = ':memory:'
     return _TMP_DB
+
+
+def _ensure_parent_dir(db_path):
+    """True if SQLite can open ``db_path``, creating its directory if needed.
+
+    An in-memory path has no directory and is always usable. Anything else needs
+    its parent to exist and be writable. The directory is created here rather
+    than at first write so that a failure is logged once, at boot, where the
+    message can still be read.
+    """
+    if db_path == ':memory:' or not os.path.dirname(os.path.abspath(db_path)):
+        return True
+    parent = os.path.dirname(os.path.abspath(db_path))
+    if os.path.isdir(parent):
+        return _is_writable_dir(parent)
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError:
+        return False
+    return _is_writable_dir(parent)
 
 
 def create_app():

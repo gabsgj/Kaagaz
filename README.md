@@ -435,14 +435,52 @@ external database path.
 | `GET /api/research/options` | Reference data for the pickers |
 | `GET /api/research/cache` | Cache statistics |
 | `GET /api/research/entries` | What is pre-warmed |
-| `GET /api/research/health` | Deployment smoke test — database writability, cache state, key presence |
+| `GET /api/research/health` | Deployment smoke test — database writability, cache state, per-provider key and trip state |
+
+### 8.1 Keyboard
+
+The whole point of the page is that you can ask about anything, so the most
+likely next action is typing. `/` (or Cmd/Ctrl-K) jumps to the search field
+from anywhere, `Escape` leaves it, and the arrow keys walk the example chips
+with `Enter` following the focused one.
+
+Every shortcut defers to the caret. Typing `a/b` into the search field types
+`a/b` — the `/` handler stands down the moment focus is in a field, which is a
+bug the browser gate caught rather than a rule I thought of up front.
+
+### 8.2 Deploying
+
+The app is a Flask app with a SQLite file, so it runs anywhere Python does.
+Two paths are wired up.
+
+**Serverless (Vercel).** `vercel.json` sets `/tmp` as the database location,
+because the deployment bundle is read-only and only `/tmp` is writable.
+`.github/workflows/deploy.yml` runs the Python suite and a real browser boot on
+every push, and only deploys if both pass. It needs three repository settings:
+
+| Setting | Where | Purpose |
+|---|---|---|
+| `VERCEL_TOKEN` | Actions secrets | a Vercel access token |
+| `VERCEL_ORG_ID` | Actions variables | team id, from Vercel → Settings → General |
+| `VERCEL_PROJECT_ID` | Actions variables | project id, from Vercel → Project → Settings |
+
+Without `VERCEL_PROJECT_ID` the deploy step does not run and the verify job
+still passes, so a fork never fails CI for missing credentials.
+
+**A real server.** `Dockerfile` and `Procfile` cover Fly, Render, Railway and
+anything else. Mount a volume and point `DATABASE_PATH` at it, or the cache is
+rebuilt from the seed on every cold start — which is correct, just slower.
+
+One worker on purpose. This is a single-process SQLite app with a threadpool of
+fetchers inside each request; scaling out means moving off SQLite, which is a
+different project. `gthread` is the worker class that uses those threads.
 
 ---
 
 ## 9. Testing
 
 ```sh
-pytest tests/ -q          # 183 tests, ~3s
+pytest tests/ -q          # 185 tests, ~7s
 ```
 
 They run with **no network access and no API keys**, deliberately: they assert
@@ -455,10 +493,17 @@ Two hard requirements are claims about *rendered geometry*, which no Python test
 can assert, so they are measured in real Chrome:
 
 ```sh
-cd tests/browser && npm install
-node responsive_audit.js   # 7 pages x 375/768/1280px
-node jitter_test.js        # flip-board stability
+npm install                # puppeteer-core; drives the Chrome you already have
+npm run gates              # all four, in order
 ```
+
+Or individually, against a server already running on :5000:
+
+```sh
+BASE=http://127.0.0.1:5000 node tests/browser/responsive_audit.js  # 7 pages x 375/768/1280px
+BASE=http://127.0.0.1:5000 node tests/browser/jitter_test.js       # flip-board stability
+BASE_URL=http://127.0.0.1:5000 node tests/browser/demo_links_test.js # every demo chip
+BASE_URL=http://127.0.0.1:5000 node tests/browser/keyboard_test.js  # shortcuts
 
 `responsive_audit.js` checks for horizontal overflow, edge bleed, content
 clipped inside its own box, sub-24px tap targets, WCAG AA contrast computed
@@ -467,9 +512,17 @@ through every value from 0 to N and asserts the board does not move or resize,
 that all digit cells stay the same width, that the status badge does not resize
 between its three labels, and that nothing shifts during the 3D flip animation.
 
-Both exit non-zero on failure. This is not ceremony: these gates are what caught
-a 4.41:1 contrast failure, a board clipping off-canvas at 375px, and the
-`data-min` mismatch that would have shifted the board sideways at ten documents.
+`demo_links_test.js` clicks every example chip and asserts a complete, sourced
+checklist came back from cache. `keyboard_test.js` drives the shortcuts below on
+a real keypress path rather than asserting the handlers exist.
+
+All four exit non-zero on failure. This is not ceremony: these gates are what
+caught a 4.41:1 contrast failure, a board clipping off-canvas at 375px, the
+`data-min` mismatch that would have shifted the board sideways at ten documents,
+and a `/` shortcut that ate the character it was supposed to type.
+
+They are wired into CI in `.github/workflows/deploy.yml`, which runs the Python
+suite and a real browser boot before any deploy is allowed to publish.
 
 ---
 

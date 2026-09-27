@@ -1,0 +1,17 @@
+.git
+.github
+.gitignore
+.aimem
+venv
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.env
+.venv
+.pytest_cache
+.DS_Store
+tests
+scripts
+README.md

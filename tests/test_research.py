@@ -860,6 +860,58 @@ class TestDeployment(unittest.TestCase):
             self.assertTrue(app.config['DATABASE_IS_EPHEMERAL'],
                             "a path outside instance/ does not survive a restart")
 
+    def test_database_path_parent_directory_is_created(self):
+        """A DATABASE_PATH whose directory does not exist must still boot.
+
+        SQLite will not create missing parent directories, so returning such a
+        path made the very first write fail with "unable to open database file"
+        and the app 500'd on boot. This is the shape a typo in DATABASE_PATH or
+        a volume that has not been mounted yet produces, which is exactly the
+        situation the override exists to handle.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            # A directory two levels deep that does not exist yet.
+            nested_dir = os.path.join(tmp, 'data', 'sub')
+            app = self._fresh_app(nested_dir)
+            nested = os.path.join(nested_dir, 'kaagaz.db')
+            self.assertEqual(app.config['DATABASE'], nested)
+            self.assertTrue(os.path.isdir(os.path.dirname(nested)),
+                            'the parent directory should have been created')
+            # And it is actually usable, not merely created.
+            client = app.test_client()
+            self.assertEqual(client.get('/').status_code, 200)
+            self.assertEqual(client.get('/api/research/health').status_code, 200)
+
+    def test_unusable_database_path_falls_back_instead_of_crashing(self):
+        """An override that cannot be prepared must not stop the app booting.
+
+        A path under a read-only or nonexistent parent is a legitimate
+        misconfiguration. The right response is to log it once and fall back to
+        a writable location, so the process serves requests and reports its own
+        degraded state — not to refuse to start.
+        """
+        import app as app_pkg
+        with tempfile.TemporaryDirectory() as tmp:
+            unusable = os.path.join(tmp, 'ro', 'nested', 'kaagaz.db')
+            # Make the parent un-creatable by parking a *file* where a
+            # directory would have to go.
+            os.makedirs(os.path.join(tmp, 'ro'), exist_ok=True)
+            with open(os.path.join(tmp, 'ro', 'nested'), 'w') as fh:
+                fh.write('not a directory')
+            previous = os.environ.get('DATABASE_PATH')
+            os.environ['DATABASE_PATH'] = unusable
+            try:
+                import importlib
+                importlib.reload(app_pkg)
+                app = app_pkg.create_app()
+            finally:
+                if previous is None:
+                    os.environ.pop('DATABASE_PATH', None)
+                else:
+                    os.environ['DATABASE_PATH'] = previous
+            self.assertNotEqual(app.config['DATABASE'], unusable)
+            self.assertEqual(app.test_client().get('/').status_code, 200)
+
     def test_cold_start_creates_every_table(self):
         """A brand-new database must come up fully schema'd.
 
