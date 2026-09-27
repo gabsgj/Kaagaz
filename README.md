@@ -134,7 +134,37 @@ sequenceDiagram
     end
 ```
 
-### 3.3 Why search and generation are separate steps
+### 3.3 How it searches
+
+The search step is a direct, keyless pipeline rather than a paid search API:
+
+1. **Find.** DuckDuckGo's keyless HTML endpoints return result titles and URLs.
+2. **Read.** The top five pages are fetched in parallel and stripped to text.
+3. **Cite.** Only URLs that actually returned readable text become sources.
+
+The synthesis step then receives **the real page text**, not another model's
+summary of it. That is better grounding than a web-enabled model gives you, and
+it means the citation list is exactly the set of pages that were read — nothing
+is cited that was not opened.
+
+A second query biased at the named bank's own site runs when the first did not
+already surface an authoritative source, because a generic query for "home loan
+documents required" is dominated by SEO listicles. Results are then ranked:
+a regulator, then the bank's own product page, then everything else. An
+unknown bank is still researched — it simply ranks by its own name match.
+
+Two backends sit behind that:
+
+- **Direct search (primary, no key).** As above.
+- **Model-native web access (fallback).** An OpenRouter `:online` model. Used
+  when the direct path is blocked or rate-limited, and it needs a funded key.
+
+DuckDuckGo throttles aggressively and answers a blocked request with **HTTP 202
+and a challenge page** rather than an error. That is detected explicitly, and a
+throttled query is retried with backoff before giving up and falling through to
+the second backend. A throttle is never reported as "no results".
+
+### 3.4 Why search and generation are separate steps
 
 A model with web access is only available on one provider. Coupling search to
 generation would mean a search-tier outage also killed generation. Splitting
@@ -151,7 +181,7 @@ stale answer, clearly labelled with its date. Search failure with nothing
 cached returns a specific, retryable message. Generation failure still returns
 the researched text with its sources attached.
 
-### 3.4 Repository layout
+### 3.5 Repository layout
 
 ```
 kaagaz/
@@ -376,7 +406,7 @@ external database path.
 ## 9. Testing
 
 ```sh
-pytest tests/ -q          # 133 tests
+pytest tests/ -q          # 162 tests, ~2s
 ```
 
 They run with **no network access and no API keys**, deliberately: they assert

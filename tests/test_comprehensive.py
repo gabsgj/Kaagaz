@@ -28,6 +28,31 @@ def client(app):
     with app.test_client() as c:
         yield c
 
+@pytest.fixture(scope="module", autouse=True)
+def stub_ai_provider():
+    """No test in this suite may make a network call.
+
+    The suite documents itself as running with no keys and no network. Once
+    NVIDIA NIM started actually answering, the /api/ai/explain tests silently
+    became live integration tests and the run went from 5s to 140s. Stubbing at
+    the route boundary keeps the endpoint contract under test while making the
+    runtime deterministic and honest.
+    """
+    import app.ai.routes as ai_routes
+    original = ai_routes.generate
+
+    def fake_generate(term, context_rows, max_tokens=300):
+        return {
+            "explanation": "Stubbed explanation for %r. It explains the term "
+                           "in plain language and says where to get it." % term,
+            "source": "openrouter",
+        }
+
+    ai_routes.generate = fake_generate
+    yield
+    ai_routes.generate = original
+
+
 @pytest.fixture(scope="module")
 def db(app):
     conn = sqlite3.connect(app.config['DATABASE'])
@@ -427,24 +452,30 @@ class TestAILayer:
             if orig_or:  os.environ['OPENROUTER_API_KEY']  = orig_or
             if orig_nim: os.environ['NVIDIA_NIM_API_KEY'] = orig_nim
 
-    def test_live_ai_call_if_key_present(self, app):
-        """The chain must always return usable prose, online or not.
+    def test_generation_chain_always_returns_usable_prose(self, app):
+        """Whatever happens upstream, the caller must get something renderable.
 
         This deliberately does not assert that a live provider answered. Keys
-        expire, free tiers run out of credit, and a test that demands a 200 from
-        OpenRouter is a test that fails for reasons unrelated to the code. What
-        matters is that whatever happens upstream, the caller still gets
-        something it can render.
+        expire, free tiers run out of credit, and a test that demands a 200
+        from OpenRouter fails for reasons unrelated to the code. It exercises
+        the real chain with no keys at all, which is the worst case, and
+        asserts only that the contract holds.
         """
-        if not os.environ.get('OPENROUTER_API_KEY'):
-            pytest.skip("No OPENROUTER_API_KEY set")
-        from app.ai.client import generate
+        import app.ai.client as client
         from app.data.access import search_dataset
-        with app.app_context():
-            ctx = search_dataset('FEMA Declaration', 'nri_account')
-            result = generate('FEMA Declaration', ctx, max_tokens=150)
-        assert result['source'] in ('openrouter', 'nvidia_nim', 'static_fallback')
-        assert len(result['explanation']) > 20
+        saved = {k: os.environ.pop(k, None)
+                 for k in ('OPENROUTER_API_KEY', 'NVIDIA_NIM_API_KEY')}
+        try:
+            with app.app_context():
+                ctx = search_dataset('FEMA Declaration', 'nri_account')
+                result = client.generate('FEMA Declaration', ctx, max_tokens=150)
+            assert result['source'] == 'static_fallback'
+            assert len(result['explanation']) > 20
+            assert 'Traceback' not in result['explanation']
+        finally:
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
 
     def test_explain_multiple_terms(self, client):
         terms = [

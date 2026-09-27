@@ -909,21 +909,37 @@ class TestDeployment(unittest.TestCase):
                     os.environ[k] = v
 
     def test_ask_endpoint_still_answers_without_any_keys(self):
-        """No key must mean a graceful typed error, never a 500."""
-        import app as app_pkg
+        """No key and no reachable search must mean a typed error, never a 500.
+
+        The search step is stubbed to fail outright so the test exercises the
+        degradation path deterministically instead of making real calls and
+        inheriting whatever a public search engine feels like returning.
+        """
+        import app.research.agent as am
+        from app.research.search import SearchError
+        saved_search = am.search
+
+        def boom(*a, **kw):
+            raise SearchError("no backend")
+
+        am.search = boom
         saved = os.environ.pop('OPENROUTER_API_KEY', None)
         try:
-            app = create_app()
-            c = app.test_client()
+            c = create_app().test_client()
             r = c.post('/api/research/ask',
                        json={'transaction_type': 'a brand new loan product'})
-            self.assertIn(r.status_code, (200, 503))
+            self.assertEqual(r.status_code, 503)
             body = json.loads(r.data)
-            if r.status_code == 503:
-                self.assertIn('error', body)
-                self.assertNotIn('Traceback', body['error'])
-                self.assertNotIn('OpenRouter', body['error'])
+            self.assertIn('error', body)
+            self.assertEqual(body['kind'], 'search_unavailable')
+            self.assertTrue(body['retryable'])
+            # A user-facing message, never an exception repr or a provider name.
+            self.assertNotIn('Traceback', body['error'])
+            self.assertNotIn('SearchError', body['error'])
+            self.assertNotIn('OpenRouter', body['error'])
+            self.assertNotIn('HTTP', body['error'])
         finally:
+            am.search = saved_search
             if saved is not None:
                 os.environ['OPENROUTER_API_KEY'] = saved
 
@@ -1157,3 +1173,196 @@ class TestJobLifecycleOverHTTP(unittest.TestCase):
         body = json.loads(r.data)
         self.assertEqual(body['kind'], 'invalid_request')
         self.assertFalse(body['retryable'])
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Direct search backend
+#
+# The keyless search path is pure parsing and ranking, so every branch is
+# testable without a network call. These tests exist because the bugs found
+# here were all silent: a percent-encoding mistake produced URLs that looked
+# plausible and simply never fetched, and an HTTP 202 anti-bot page parsed as
+# "zero results" and surfaced as a misleading "no search backend available".
+# ══════════════════════════════════════════════════════════════════════
+class TestDirectSearch(unittest.TestCase):
+
+    def test_percent_encoded_result_urls_are_decoded(self):
+        """DuckDuckGo wraps URLs in a percent-encoded uddg parameter.
+
+        html.unescape alone leaves https%3A%2F%2F... which looks like a URL
+        to a regex and 404s to a server. This is the bug that made an early
+        version fetch 0 of 5 pages while reporting no error.
+        """
+        from app.research.search import _decode_url
+        raw = "https%3A%2F%2Fhomeloans.sbi.bank.in%2Fproducts%2Fview%2Fnri-home-loan"
+        self.assertEqual(_decode_url(raw),
+                         "https://homeloans.sbi.bank.in/products/view/nri-home-loan")
+
+    def test_parse_ddg_lite_extracts_titles_and_urls(self):
+        from app.research.search import _parse_ddg_lite
+        from urllib.parse import quote
+        target = "https://homeloans.sbi.bank.in/products/view/nri-home-loan"
+        html = (
+            '<a rel="nofollow" href="//duckduckgo.com/l/?uddg=%s">'
+            '<strong>NRI</strong> Home Loan Documents</a>' % quote(target, safe="")
+        )
+        hits = _parse_ddg_lite(html)
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0]['url'], target)
+        self.assertIn('Home Loan', hits[0]['title'])
+
+    def test_parse_ddg_html_extracts_titles_and_urls(self):
+        from app.research.search import _parse_ddg_html
+        from urllib.parse import quote
+        target = "https://www.urbanmoney.com/home-loan/sbi"
+        html = ('<a rel="nofollow" class="result__a" '
+                'href="//duckduckgo.com/l/?uddg=%s">Documents Required</a>'
+                % quote(target, safe=""))
+        hits = _parse_ddg_html(html)
+        self.assertEqual(hits[0]['url'], target)
+        self.assertEqual(hits[0]['title'], 'Documents Required')
+
+    def test_duplicate_results_are_collapsed(self):
+        from app.research.search import _parse_ddg_lite
+        from urllib.parse import quote
+        target = "https://example.com/a"
+        row = ('<a href="//duckduckgo.com/l/?uddg=%s">Title</a>' % quote(target, safe=""))
+        self.assertEqual(len(_parse_ddg_lite(row * 4)), 1)
+
+    def test_anti_bot_responses_are_detected(self):
+        """HTTP 202 with a challenge body is a throttle, not a success."""
+        from app.research.search import _looks_blocked
+
+        class R:
+            def __init__(self, code):
+                self.status_code = code
+
+        for code in (202, 429, 503):
+            self.assertTrue(_looks_blocked(R(code), "<html>ok</html>"), code)
+        self.assertFalse(_looks_blocked(R(200), "<html>results</html>"))
+        for marker in ('anomaly', 'captcha', 'unusual traffic', 'are you a robot'):
+            self.assertTrue(_looks_blocked(R(200), marker), marker)
+
+    def test_junk_hosts_are_excluded(self):
+        from app.research.search import _SKIP_HOSTS
+        for host in ('scribd.com', 'slideshare.net', 'reddit.com', 'youtube.com'):
+            self.assertIn(host, _SKIP_HOSTS)
+
+    def test_bank_official_page_outranks_a_listicle(self):
+        """This ranking is the difference between a sourced answer and SEO
+        sludge: a bank publishing about itself beats any third-party summary."""
+        from app.research.search import _tier, _rank
+        official = {"url": "https://homeloans.sbi.bank.in/products/view/nri-home-loan",
+                    "title": "SBI NRI Home Loan"}
+        listicle = {"url": "https://www.someblog.com/best-sbi-home-loan-docs",
+                    "title": "Best SBI home loan documents 2026"}
+        regulator = {"url": "https://www.rbi.org.in/circular", "title": "RBI"}
+
+        self.assertLess(_tier(official, "State Bank of India"), _tier(listicle,
+                                                                   "State Bank of India"))
+        self.assertLess(_tier(regulator, ""), _tier(listicle, ""))
+
+        ranked = _rank([listicle, official, regulator], "State Bank of India")
+        urls = [r['url'] for r in ranked]
+        # RBI first, then the bank's own page, then the listicle last.
+        self.assertEqual(urls[0], regulator['url'])
+        self.assertLess(urls.index(official['url']), urls.index(listicle['url']))
+
+    def test_ranking_is_stable_within_a_tier(self):
+        """Sorting must not flatten DuckDuckGo's relevance order into
+        alphabetical order — that would lose its ranking entirely."""
+        from app.research.search import _rank
+        a = {"url": "https://zebra.com/1", "title": "z"}
+        b = {"url": "https://apple.com/2", "title": "a"}
+        ranked = _rank([a, b], "")
+        self.assertEqual([r['url'] for r in ranked], [a['url'], b['url']])
+
+    def test_unknown_bank_still_gets_tiered_not_rejected(self):
+        from app.research.search import _tier
+        hit = {"url": "https://karnatakabank.example/loans", "title": "x"}
+        self.assertEqual(_tier(hit, "Karnataka Bank"), 0)
+
+    def test_strip_html_removes_scripts_and_tags(self):
+        from app.research.search import _strip_html
+        raw = ('<html><head><style>b{}</style></head><body>'
+               '<script>evil()</script><h1>Title</h1><p>Body &amp; more</p>'
+               '<!-- comment --></body></html>')
+        out = _strip_html(raw)
+        self.assertIn('Title', out)
+        self.assertIn('Body & more', out)
+        for junk in ('evil()', '<script', 'b{}', 'comment'):
+            self.assertNotIn(junk, out)
+
+    def test_page_fetch_returns_none_for_dead_links_not_raising(self):
+        from app.research.search import _fetch_page
+        # Reserved TLD, guaranteed not to resolve.
+        self.assertIsNone(_fetch_page({"url": "http://nope.invalid/x", "title": "t"}))
+
+    def test_search_falls_through_when_direct_is_throttled(self):
+        """A throttle must not abort the pipeline — there is a second backend.
+
+        With the direct path throttled and every model-native fallback failing,
+        the caller still gets a typed SearchError, but the message must say
+        that throttling happened. An error that reads "no backend available"
+        when the truth is "we were rate-limited" sends the reader looking in
+        entirely the wrong place.
+        """
+        import app.research.search as sm
+        from app.research.search import _RateLimited, SearchError
+
+        def throttled(*a, **kw):
+            raise _RateLimited("blocked")
+
+        # Cut the retry sleeps and the model fallbacks out of the test.
+        original_search, original_retries, original_models = (
+            sm._direct_search, sm.DIRECT_SEARCH_RETRIES, sm.SEARCH_MODELS)
+        original_call = sm._call_openrouter_search
+        sm._direct_search = throttled
+        sm.DIRECT_SEARCH_RETRIES = (0,)
+        sm.SEARCH_MODELS = []
+        try:
+            with self.assertRaises(SearchError) as ctx:
+                sm.search('home loan', bank='X Bank',
+                          residency_phrase='an applicant', state='')
+            self.assertIn('throttled', str(ctx.exception))
+        finally:
+            sm._direct_search = original_search
+            sm.DIRECT_SEARCH_RETRIES = original_retries
+            sm.SEARCH_MODELS = original_models
+            sm._call_openrouter_search = original_call
+
+    def test_search_returns_direct_results_without_touching_openrouter(self):
+        """The direct path must be self-sufficient: no paid key, no OpenRouter."""
+        import app.research.search as sm
+
+        def fake_direct(*a, **kw):
+            return {"findings": "page text", "citations": [
+                        {"url": "https://bank.example/doc", "title": "Doc"}],
+                    "model": "duckduckgo + direct-fetch", "provider": "direct",
+                    "latency_ms": 900, "searched_at": "2026-09-27T00:00:00"}
+
+        def explode(*a, **kw):
+            raise AssertionError("must not call OpenRouter on the direct path")
+
+        original_direct, original_call = sm._direct_search, sm._call_openrouter_search
+        sm._direct_search = fake_direct
+        sm._call_openrouter_search = explode
+        try:
+            out = sm.search('home loan', bank='X Bank',
+                            residency_phrase='an applicant', state='')
+        finally:
+            sm._direct_search = original_direct
+            sm._call_openrouter_search = original_call
+
+        self.assertEqual(out['provider'], 'direct')
+        self.assertEqual(out['model'], 'duckduckgo + direct-fetch')
+        self.assertEqual(len(out['citations']), 1)
+        self.assertIn('query', out)
+
+    def test_retry_schedule_is_bounded(self):
+        from app.research.search import DIRECT_SEARCH_RETRIES
+        self.assertTrue(DIRECT_SEARCH_RETRIES[0] == 0)
+        self.assertEqual(list(DIRECT_SEARCH_RETRIES),
+                         sorted(DIRECT_SEARCH_RETRIES), "must grow")
+        self.assertLess(sum(DIRECT_SEARCH_RETRIES), 60,
+                        "total backoff must not exceed a cold-research wait")

@@ -9,16 +9,34 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 NVIDIA_NIM_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
 # Provider order is unchanged from Phase 1: OpenRouter first, NVIDIA NIM
-# second. What changed in Phase 2 is the *model* on OpenRouter.
+# second. What changed in Phase 2 is the *model* on each.
 #
-# gpt-4o-mini is now primary. The research pipeline asks for strict JSON over a
-# ~6k-token grounding prompt, and llama-3.1-8b was returning prose and
+# OpenRouter primary is gpt-4o-mini. The research pipeline asks for strict JSON
+# over a long grounding prompt, and llama-3.1-8b was returning prose and
 # truncated JSON often enough to drop whole research runs into the unstructured
 # fallback. gpt-4o-mini returns valid JSON essentially every time and costs
-# roughly $0.00005 per call, so reliability is effectively free here.
-# llama-3.1-8b stays as the second attempt because it is ~6x cheaper still.
+# roughly $0.00005 per call. NOTE: the OpenRouter key in use is on a free tier
+# with no credit, so this tier currently 402s and every request falls through to
+# NIM. It stays first because it is the better model the moment credit exists.
 OPENROUTER_MODELS = ["openai/gpt-4o-mini", "meta-llama/llama-3.1-8b-instruct"]
-NVIDIA_NIM_MODEL = "meta/llama-3.1-8b-instruct"
+
+# NVIDIA NIM models, in order. Every one of these was verified live against the
+# account in use, because the Phase-1 choice (meta/llama-3.1-8b-instruct) now
+# returns HTTP 410 Gone and the currently-listed model list contains mostly
+# endpoints that 404 on completion. A sweep of all 82 advertised models found
+# 13 that actually answer; these are the instruction-following ones, ordered by
+# the quality/latency tradeoff measured on a real JSON-mode request:
+#   nemotron-3-super-120b   2.7s, valid JSON both with and without json_mode
+#   mistral-nemotron        2.1s, valid JSON, the fastest reliable option
+#   llama-3.2-11b-vision    1.8s, valid JSON, useful last resort
+# nemotron-3.5-lightning was excluded: it emits visible reasoning before the
+# answer and returned non-JSON on 58s of latency.
+NVIDIA_NIM_MODELS = [
+    "nvidia/nemotron-3-super-120b-a12b",
+    "mistralai/mistral-nemotron",
+    "meta/llama-3.2-11b-vision-instruct",
+]
+NVIDIA_NIM_MODEL = NVIDIA_NIM_MODELS[0]
 # Retained for callers that want a single name.
 OPENROUTER_MODEL = OPENROUTER_MODELS[0]
 
@@ -95,29 +113,46 @@ def _call_openrouter(system_prompt, user_prompt, max_tokens,
     raise last if last else ValueError("No OpenRouter model available")
 
 
-def _call_nvidia_nim(system_prompt: str, user_prompt: str, max_tokens: int,
-                     temperature: float = 0.2, json_mode: bool = False) -> str:
+def _call_nvidia_nim_model(model, system_prompt, user_prompt, max_tokens,
+                           temperature, json_mode):
     api_key = os.environ.get("NVIDIA_NIM_API_KEY", "")
     if not api_key:
         raise ValueError("No NVIDIA NIM API key")
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
     payload = {
-        "model": NVIDIA_NIM_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
         "max_tokens": max_tokens,
-        "temperature": temperature
+        "temperature": temperature,
     }
     if json_mode:
+        # NIM honours response_format on the models verified above, and it is
+        # what takes them from 14s of prose to 2.7s of valid JSON.
         payload["response_format"] = {"type": "json_object"}
-    resp = requests.post(NVIDIA_NIM_API_URL, headers=headers, json=payload, timeout=TIMEOUT)
+    resp = requests.post(NVIDIA_NIM_API_URL, headers=headers, json=payload,
+                         timeout=TIMEOUT)
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"].strip()
+
+
+def _call_nvidia_nim(system_prompt, user_prompt, max_tokens,
+                     temperature=0.2, json_mode=False):
+    """Walk the NIM model tier list; raise if all of them fail."""
+    last = None
+    for model in NVIDIA_NIM_MODELS:
+        try:
+            return _call_nvidia_nim_model(model, system_prompt, user_prompt,
+                                          max_tokens, temperature, json_mode)
+        except Exception as exc:
+            last = exc
+    raise last if last else ValueError("No NIM model available")
 
 def _static_fallback(term: str, context_rows: list) -> str:
     if context_rows:
