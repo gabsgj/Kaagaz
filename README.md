@@ -4,6 +4,8 @@
 
 Built with IBM Bob 2.0 for the lablab.ai hackathon, 25–27 September 2026.
 
+Live demo: <https://kaagaz.gabrieljames.me/>
+
 ---
 
 ## 1. Overview
@@ -100,37 +102,37 @@ sequenceDiagram
     participant S as Web search
     participant G as AI generation
 
-    U->>B: "loan against FD at SBI, as an NRI"
-    B->>F: GET /checklist?transaction_type=...&bank=...&residency=nri
-    F->>F: normalise (sbi -> State Bank of India;<br/>"loan against FD" -> canonical form)
+    U->>B: loan against FD at SBI as an NRI
+    B->>F: GET checklist with transaction bank and residency
+    F->>F: normalise SBI to State Bank of India and loan against FD to canonical form
     F->>C: SELECT by cache_key
 
-    alt Fresh entry exists (age <= cache_ttl_days)
-        C-->>F: answer + source_urls + researched_at
-        F-->>B: 200, full checklist
-        Note over B: rendered in ~1ms.<br/>Badged "cached answer",<br/>dated, sources listed
+    alt Fresh entry exists and age is within TTL
+        C-->>F: answer plus source URLs plus researched time
+        F-->>B: 200 with full checklist
+        Note over B: rendered in about 1ms, badged cached answer, dated, sources listed
     else Miss or stale
         C-->>F: nothing usable
-        F-->>B: 200, "researching" view
-        Note over B: flip-board shows the LIVE stage<br/>names and source hosts.<br/>Nothing here is simulated.
+        F-->>B: 200 with researching view
+        Note over B: flip-board shows live stage names and source hosts, nothing simulated
 
-        B->>F: POST /api/research/start
-        F-->>B: 202 { job_id }
+        B->>F: POST research start
+        F-->>B: 202 with job id
 
         loop every 600ms while running
-            B->>F: GET /api/research/status/&lt;job_id&gt;
-            F-->>B: stage, elapsed, citations so far
-            Note over B: ticker + source pills update<br/>as they are actually discovered
+            B->>F: GET research status by job id
+            F-->>B: stage elapsed and citations so far
+            Note over B: ticker and source pills update as discoveries arrive
         end
 
-        F->>S: research prompt (transaction,<br/>bank, state, residency)
-        S-->>F: findings + the URLs actually read
-        F->>G: findings + citations -> strict JSON
+        F->>S: research prompt with transaction bank state residency
+        S-->>F: findings plus the URLs actually read
+        F->>G: findings plus citations as strict JSON
         G-->>F: structured checklist
-        F->>F: validate; correct RBI vs<br/>stamp-act misattribution;<br/>drop unsourced figures
-        F->>C: INSERT answer, source_urls,<br/>researched_at, research_query
-        F-->>B: done + answer
-        B->>F: re-request the page (now a cache hit)
+        F->>F: validate and correct RBI versus stamp-act attribution and drop unsourced figures
+        F->>C: INSERT answer source URLs research time and research query
+        F-->>B: done plus answer
+        B->>F: re-request the page now a cache hit
         F-->>B: the rendered checklist
     end
 ```
