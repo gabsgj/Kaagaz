@@ -328,6 +328,30 @@ flask --app wsgi run
 `python -m scripts.preseed --list` shows what is cached, and `--force` refreshes
 it.
 
+### Deploying
+
+`vercel.json` is included and sets `DATABASE_PATH=/tmp/kaagaz.db`, because the
+Vercel deployment bundle is read-only and only `/tmp` is writable — the Phase-1
+config would have died on its first write. Two consequences worth knowing before
+you deploy:
+
+- **The database is ephemeral on serverless.** `/tmp` does not survive a cold
+  start, so the researched cache is rebuilt. The app handles this itself: on
+  startup, if the research cache is empty it re-seeds from the bundled seed set,
+  so a cold instance still answers the demo cases instantly. Nothing is silently
+  degraded and nothing waits 30 seconds per question.
+- **Background research jobs fall back to inline execution.** Detached threads
+  do not survive a serverless response, so the polling endpoint detects a dead
+  worker and runs the research on the polling request instead. The user still
+  gets a real answer and real progress; it just costs one long request.
+
+`GET /api/research/health` reports the database path, whether it is ephemeral,
+the cache entry count, and whether a key is present, so a deployment can be
+verified in a single call.
+
+To keep the cache across restarts, set `DATABASE_PATH` to a mounted volume or an
+external database path.
+
 > **Note on API credit.** Live research costs roughly **$0.005** per cold query.
 > The pre-seeded cache is served without any network call, so the app is fully
 > demonstrable with an empty cache — but the "ask about anything" path needs a
@@ -345,6 +369,7 @@ it.
 | `GET /api/research/options` | Reference data for the pickers |
 | `GET /api/research/cache` | Cache statistics |
 | `GET /api/research/entries` | What is pre-warmed |
+| `GET /api/research/health` | Deployment smoke test — database writability, cache state, key presence |
 
 ---
 
@@ -396,6 +421,9 @@ a 4.41:1 contrast failure, a board clipping off-canvas at 375px, and the
 - **No authentication, no upload, no OCR, no payments** — all out of scope.
 - **The pre-warmed cache is a demo aid.** It exists so a recorded demo is
   reliable. The architecture, not the cache size, is what proves the reach.
+- **On serverless the cache is rebuilt, not persisted.** Handled automatically
+  at startup, but it means the deployed instance has no memory of what previous
+  visitors asked.
 
 ---
 

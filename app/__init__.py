@@ -1,8 +1,16 @@
 import os
+import tempfile
+
 from flask import Flask
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Databases that are in memory only. Set by the deployment fallbacks below when
+# no writable file location could be found, so the app still runs (degraded and
+# clearly labelled) rather than failing at import time.
+_TMP_DB = None
+
 
 def _format_inr(value):
     """Format an integer as Indian-locale number string (e.g. 100000 → 1,00,000)."""
@@ -23,10 +31,59 @@ def _format_inr(value):
         s = s[:-2]
     return result
 
+
+def _resolve_database_path(instance_path):
+    """Pick a writable location for the SQLite file.
+
+    Order of preference:
+
+      1. ``DATABASE_PATH`` — explicit override, always wins.
+      2. ``instance/`` — the Flask-idiomatic location, used in development.
+      3. ``/tmp/`` — on serverless platforms (Vercel, Lambda) the deployment
+         bundle is read-only and only ``/tmp`` is writable. Without this the app
+         dies at import time on the first write.
+      4. an in-memory database — last resort, so the process still serves
+         requests and reports its own degraded state rather than 500-ing.
+    """
+    global _TMP_DB
+
+    override = os.environ.get('DATABASE_PATH', '').strip()
+    if override:
+        return override
+
+    candidate = os.path.join(instance_path, 'kaagaz.db')
+    try:
+        with open(candidate, 'a'):
+            pass
+        return candidate
+    except OSError:
+        pass
+
+    fallback = os.path.join(tempfile.gettempdir(), 'kaagaz.db')
+    try:
+        with open(fallback, 'a'):
+            pass
+        return fallback
+    except OSError:
+        _TMP_DB = ':memory:'
+        return _TMP_DB
+
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
-    app.config['DATABASE'] = os.path.join(app.instance_path, 'kaagaz.db')
+    app.config['DATABASE'] = _resolve_database_path(app.instance_path)
+    # Anything outside instance/ is /tmp or memory, so it does not survive a
+    # cold start. The UI and the health endpoint report this rather than
+    # pretending the cache is durable.
+    app.config['DATABASE_IS_EPHEMERAL'] = not os.path.abspath(
+        app.config['DATABASE']
+    ).startswith(os.path.abspath(app.instance_path))
+    # Serverless platforms also destroy /tmp on cold start, so the research
+    # cache must be able to rebuild itself. See _ensure_research_seed().
+    app.config['SERVERLESS'] = bool(
+        os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+    )
 
     app.jinja_env.filters['format_inr'] = _format_inr
 
@@ -50,5 +107,36 @@ def create_app():
         seed_db(app)
         # Phase 2: research cache lives alongside the Phase-1 seed dataset
         research_cache.init_schema(app)
+        _ensure_research_seed(app)
 
     return app
+
+
+def _ensure_research_seed(app):
+    """Populate the research cache if it is empty.
+
+    On a normal machine this is a no-op — you pre-warm with
+    ``scripts/preseed``. But on a serverless cold start the SQLite file lives
+    in /tmp and is gone, so without this the deployed instance would answer
+    every question with a 15-40 second research call and look broken. The seed
+    data is bundled, so the demo cases come back instantly on their own.
+    """
+    from .research import cache as research_cache
+    try:
+        stats = research_cache.stats(app)
+        if stats.get('entries', 0) > 0:
+            return
+    except Exception:
+        return  # never let cache bookkeeping break startup
+
+    try:
+        from scripts.preseed import seed_all
+        seeded, _skipped = seed_all(app, force=False, verbose=False)
+        if seeded:
+            app.logger.info(
+                'Research cache was empty; auto-seeded %d entries. '
+                'Set DATABASE_PATH to a persistent volume to keep them.',
+                seeded,
+            )
+    except Exception as exc:  # noqa: BLE001
+        app.logger.warning('Could not auto-seed the research cache: %s', exc)

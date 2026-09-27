@@ -10,6 +10,7 @@ Kaagaz — research API.
   GET  /api/research/entries      — what we have pre-warmed
 """
 
+import os
 import time
 
 from flask import Blueprint, current_app, jsonify, request
@@ -112,6 +113,33 @@ def status(job_id):
 @research_bp.route("/cache")
 def cache_stats():
     return jsonify(cache_mod.stats(current_app._get_current_object()))
+
+
+@research_bp.route("/health")
+def health():
+    """Smoke test for a deployment.
+
+    Reports the things that are easy to get wrong on a new platform and
+    invisible until they matter: is the database writable, is the research
+    cache populated, and is there an API key to search with. Deliberately does
+    not 500 — a health check that fails on a missing optional key is useless.
+    """
+    app = current_app._get_current_object()
+    cfg = app.config
+    report = {
+        'ok': True,
+        'database_path': cfg.get('DATABASE'),
+        'database_ephemeral': bool(cfg.get('DATABASE_IS_EPHEMERAL')),
+        'serverless': bool(cfg.get('SERVERLESS')),
+        'has_openrouter_key': bool(os.environ.get('OPENROUTER_API_KEY')),
+        'has_nim_key': bool(os.environ.get('NVIDIA_NIM_API_KEY')),
+    }
+    try:
+        report['cache'] = cache_mod.stats(app)
+    except Exception as exc:  # noqa: BLE001
+        report['ok'] = False
+        report['cache_error'] = str(exc)
+    return jsonify(report)
 
 
 @research_bp.route("/entries")

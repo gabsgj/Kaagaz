@@ -11,5 +11,15 @@
       "src": "/(.*)",
       "dest": "wsgi.py"
     }
-  ]
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "DATABASE_PATH": "/tmp/kaagaz.db"
+  },
+  "functions": {
+    "wsgi.py": {
+      "memory": 1024,
+      "maxDuration": 120
+    }
+  }
 }

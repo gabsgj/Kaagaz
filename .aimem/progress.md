@@ -629,3 +629,73 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-09-27 05:15] QA: Ran every seed case with search unavailable to confirm the app is fully demonstrable offline. 9/10 served. The miss was the study-abroad education loan: its seed keyed `education loan (study abroad)` while its example chip asked `education loan`, because the example tuples could not express a state and the education case was relying on the old prefix-trimming that has since been removed. Fixed by making domestic and study-abroad education loans genuinely distinct categories, adding `state` to the example tuples, and adding both a Python test (TestDemoIsPreWarmed) and a browser gate (demo_links_test.js) that assert every example resolves to a cache hit.
 
 [2026-09-27 05:25] GATE RESULTS (final): 137 Python tests pass. responsive_audit 21/21 clean. jitter_test: board and badge geometrically stable across 0..14 documents and all three status states. demo_links_test: 10/10 example chips serve a complete, sourced checklist from cache with the network down.
+[2026-09-27T05:35:14.280089] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=529 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:14.431545] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=149 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:14.431928] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:14.813056] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=241 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:14.964753] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=151 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:14.965148] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:15.229977] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=262 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:15.380371] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=150 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:15.380730] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:15.628927] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=246 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:15.782535] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=153 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:15.782991] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:16.041248] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=256 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:16.199026] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=157 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:16.205135] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:16.214796] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T05:35:16.214999] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T05:35:16.215079] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:16.440353] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=224 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:16.602076] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=161 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:16.602505] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T05:35:16.829746] AI_CALL provider=openrouter prompt_len=1476 success=False latency_ms=222 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:16.980955] AI_CALL provider=nvidia_nim prompt_len=1476 success=False latency_ms=150 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:16.981439] AI_CALL provider=static_fallback prompt_len=1476 success=True latency_ms=0
+[2026-09-27T05:35:17.203332] AI_CALL provider=openrouter prompt_len=1251 success=False latency_ms=220 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:17.355146] AI_CALL provider=nvidia_nim prompt_len=1251 success=False latency_ms=151 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:17.355728] AI_CALL provider=static_fallback prompt_len=1251 success=True latency_ms=0
+[2026-09-27T05:35:17.644307] AI_CALL provider=openrouter prompt_len=895 success=False latency_ms=286 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:17.803221] AI_CALL provider=nvidia_nim prompt_len=895 success=False latency_ms=158 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:17.803717] AI_CALL provider=static_fallback prompt_len=895 success=True latency_ms=0
+[2026-09-27T05:35:18.066663] AI_CALL provider=openrouter prompt_len=911 success=False latency_ms=260 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:18.221074] AI_CALL provider=nvidia_nim prompt_len=911 success=False latency_ms=154 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:18.221569] AI_CALL provider=static_fallback prompt_len=911 success=True latency_ms=0
+[2026-09-27T05:35:40.387994] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=274 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:40.544796] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=154 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:40.545172] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:40.938090] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=246 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:41.092848] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=154 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:41.093248] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:41.341268] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=245 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:41.494799] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=153 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:41.495197] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:41.769559] AI_CALL provider=openrouter prompt_len=869 success=False latency_ms=272 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:41.923262] AI_CALL provider=nvidia_nim prompt_len=869 success=False latency_ms=153 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:41.923671] AI_CALL provider=static_fallback prompt_len=869 success=True latency_ms=0
+[2026-09-27T05:35:42.152018] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=226 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:42.337716] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=185 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:42.338162] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:42.345558] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T05:35:42.345735] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T05:35:42.345823] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T05:35:42.714903] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=367 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:42.868179] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=153 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:42.868873] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T05:35:43.159449] AI_CALL provider=openrouter prompt_len=1476 success=False latency_ms=288 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:43.316588] AI_CALL provider=nvidia_nim prompt_len=1476 success=False latency_ms=156 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:43.317293] AI_CALL provider=static_fallback prompt_len=1476 success=True latency_ms=0
+[2026-09-27T05:35:43.591151] AI_CALL provider=openrouter prompt_len=1251 success=False latency_ms=272 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:43.741868] AI_CALL provider=nvidia_nim prompt_len=1251 success=False latency_ms=150 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:43.742250] AI_CALL provider=static_fallback prompt_len=1251 success=True latency_ms=0
+[2026-09-27T05:35:43.975842] AI_CALL provider=openrouter prompt_len=895 success=False latency_ms=232 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:44.128293] AI_CALL provider=nvidia_nim prompt_len=895 success=False latency_ms=152 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:44.128733] AI_CALL provider=static_fallback prompt_len=895 success=True latency_ms=0
+[2026-09-27T05:35:44.347022] AI_CALL provider=openrouter prompt_len=911 success=False latency_ms=216 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T05:35:44.499947] AI_CALL provider=nvidia_nim prompt_len=911 success=False latency_ms=152 error=410 Client Error: Gone for url: https://integrate.api.nvidia.com/v1/chat/complet
+[2026-09-27T05:35:44.500397] AI_CALL provider=static_fallback prompt_len=911 success=True latency_ms=0
+
+[2026-09-27 05:45] DEPLOY: Found and fixed a latent deployment blocker. The Phase-1 vercel.json would have 500'd on first write — the Vercel bundle is read-only and only /tmp is writable, but the app wrote to instance/kaagaz.db unconditionally. Added runtime path resolution (DATABASE_PATH -> instance/ -> /tmp/ -> :memory:), auto-seeding the research cache on startup when empty, and GET /api/research/health. Verified by simulating a cold serverless start at a fresh path: 10/10 demo chips auto-seeded and served instantly. Added TestDeployment (5 tests) covering cold start, path override, health honesty, and behaviour with no API keys at all.
+
+[2026-09-27 05:50] GATE RESULTS: 142 Python tests. responsive 21/21 clean. jitter stable. demo links 10/10 from cache with search down.

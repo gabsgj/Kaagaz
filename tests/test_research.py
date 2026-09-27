@@ -828,6 +828,107 @@ class TestDemoIsPreWarmed(unittest.TestCase):
 
 
 # ══════════════════════════════════════════════════════════════════════
+# Deployment
+#
+# The Phase-1 Vercel config would have taken the app down on its first write:
+# the deployment bundle is read-only and only /tmp is writable. These tests
+# pin the behaviour that a cold serverless start has to have.
+# ══════════════════════════════════════════════════════════════════════
+class TestDeployment(unittest.TestCase):
+
+    def _fresh_app(self, tmpdir):
+        """An app pointed at a brand-new database, as on a cold start."""
+        import importlib
+        import app as app_pkg
+        previous = os.environ.get('DATABASE_PATH')
+        os.environ['DATABASE_PATH'] = os.path.join(tmpdir, 'kaagaz.db')
+        try:
+            importlib.reload(app_pkg)
+            application = app_pkg.create_app()
+        finally:
+            if previous is None:
+                os.environ.pop('DATABASE_PATH', None)
+            else:
+                os.environ['DATABASE_PATH'] = previous
+        return application
+
+    def test_database_path_override_is_honoured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._fresh_app(tmp)
+            self.assertEqual(app.config['DATABASE'],
+                             os.path.join(tmp, 'kaagaz.db'))
+            self.assertTrue(app.config['DATABASE_IS_EPHEMERAL'],
+                            "a path outside instance/ does not survive a restart")
+
+    def test_cold_start_auto_seeds_the_research_cache(self):
+        """A cold serverless instance must not answer every question with a
+        15-40 second research call."""
+        from app.checklist.routes import EXAMPLES
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._fresh_app(tmp)
+            c = app.test_client()
+
+            health = json.loads(c.get('/api/research/health').data)
+            self.assertTrue(health['ok'])
+            self.assertGreaterEqual(health['cache']['entries'], 8,
+                                    "cold start must rebuild the cache from "
+                                    "the bundled seed set")
+
+            for tx, bank, residency, state, label, _note in EXAMPLES:
+                with self.subTest(example=label):
+                    r = c.get(_qs(tx, bank, residency, state))
+                    self.assertEqual(r.status_code, 200, label)
+                    self.assertIn(b'Documents ready', r.data, label)
+                    self.assertNotIn(b'board--working', r.data, label)
+
+    def test_health_endpoint_reports_the_deployment_truthfully(self):
+        c = create_app().test_client()
+        health = json.loads(c.get('/api/research/health').data)
+        for field in ('ok', 'database_path', 'database_ephemeral',
+                      'serverless', 'has_openrouter_key', 'cache'):
+            self.assertIn(field, health)
+        self.assertIn('entries', health['cache'])
+        self.assertIsInstance(health['ok'], bool)
+
+    def test_health_never_500s_without_any_keys(self):
+        """A health check that fails on a missing optional key is useless."""
+        import app as app_pkg
+        saved = {k: os.environ.pop(k, None)
+                 for k in ('OPENROUTER_API_KEY', 'NVIDIA_NIM_API_KEY')}
+        try:
+            application = create_app()
+            c = application.test_client()
+            r = c.get('/api/research/health')
+            self.assertEqual(r.status_code, 200)
+            health = json.loads(r.data)
+            self.assertFalse(health['has_openrouter_key'])
+            self.assertTrue(health['ok'])
+        finally:
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
+
+    def test_ask_endpoint_still_answers_without_any_keys(self):
+        """No key must mean a graceful typed error, never a 500."""
+        import app as app_pkg
+        saved = os.environ.pop('OPENROUTER_API_KEY', None)
+        try:
+            app = create_app()
+            c = app.test_client()
+            r = c.post('/api/research/ask',
+                       json={'transaction_type': 'a brand new loan product'})
+            self.assertIn(r.status_code, (200, 503))
+            body = json.loads(r.data)
+            if r.status_code == 503:
+                self.assertIn('error', body)
+                self.assertNotIn('Traceback', body['error'])
+                self.assertNotIn('OpenRouter', body['error'])
+        finally:
+            if saved is not None:
+                os.environ['OPENROUTER_API_KEY'] = saved
+
+
+# ══════════════════════════════════════════════════════════════════════
 # Design-system invariants (guards against regressions)
 # ══════════════════════════════════════════════════════════════════════
 class TestDesignSystem(unittest.TestCase):
