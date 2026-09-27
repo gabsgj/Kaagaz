@@ -845,3 +845,9 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-09-27 06:42] BUGFIX: The umbrella-row guard caught my own new loan-against-property entry for containing "property documents". Split the title chain into the six real documents (sale deed, chain of title, encumbrance certificate, occupancy certificate, tax and maintenance receipts, approved plan) — 5 items to 13. The test earned its keep immediately.
 
 [2026-09-27 06:45] GATE RESULTS: 165 Python tests in 2.7s. responsive 21/21. jitter stable. demo links 14/14 from cache with search down.
+[2026-09-27T06:15:16.144425] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:15:16.145197] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:15:16.145330] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:15:16.147063] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:15:16.147313] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:15:16.147421] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
