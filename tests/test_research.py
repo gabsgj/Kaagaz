@@ -1016,3 +1016,144 @@ class TestDesignSystem(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# The research job lifecycle, over HTTP
+#
+# This is the exact code path a live demo runs: POST /start, then poll
+# /status until done, then the browser re-requests the page. It could not be
+# exercised against a real provider mid-session (API credit), so it is
+# exercised here against a stubbed one — the threading, the polling contract,
+# the progress payload the flip-board reads, and the browser's follow-up
+# request are all real.
+# ══════════════════════════════════════════════════════════════════════
+class TestJobLifecycleOverHTTP(unittest.TestCase):
+
+    def setUp(self):
+        import app.research.agent as agent_mod
+        self.app = create_app()
+        self.tmp = tempfile.mkdtemp()
+        self.app.config['DATABASE'] = os.path.join(self.tmp, 't.db')
+        cache_mod.init_schema(self.app)
+        self.c = self.app.test_client()
+        self._agent = agent_mod
+
+
+    def tearDown(self):
+        import app.research.agent as am
+        if getattr(self, '_orig_search', None) is not None:
+            am.search = self._orig_search
+        if getattr(self, '_orig_synth', None) is not None:
+            am.synthesize = self._orig_synth
+
+    def test_start_poll_done_then_page_renders(self):
+        import app.research.agent as am
+        self._orig_search, self._orig_synth = am.search, am.synthesize
+        am.search = lambda *a, **kw: {
+            "findings": "stub findings",
+            "citations": [{"url": "https://bank.example/doc", "title": "Doc"},
+                          {"url": "https://rbi.example/circ", "title": "RBI"}],
+            "model": "stub-model", "provider": "openrouter:web",
+            "latency_ms": 5, "query": "q", "searched_at": "2026-09-27T00:00:00",
+        }
+        am.synthesize = lambda *a, **kw: {"answer": {
+            "summary": "stub summary",
+            "items": [{"step_order": 1, "document_name": "PAN card",
+                       "plain_explanation": "e", "where_to_obtain": "w",
+                       "approx_cost_min": 0, "approx_cost_max": 0,
+                       "approx_time_days": 1, "regulatory_source": "rbi",
+                       "depends_on": "", "source_note": "s"}],
+            # The real normaliser copies every citation onto the answer, so
+            # the stub does too — otherwise the test would be asserting a
+            # shape the pipeline never produces.
+            "sources": [{"url": "https://bank.example/doc", "title": "Doc"},
+                        {"url": "https://rbi.example/circ", "title": "RBI"}]},
+            "provider": "openrouter", "model": "", "raw": ""}
+
+        # 1. The browser asks for a cold question -> researching view
+        page = self.c.get('/checklist?transaction_type=stub+loan+for+testing'
+                          '&bank=Stub+Bank&residency=resident')
+        self.assertIn(b'board--working', page.data)
+
+        # 2. It starts a job
+        started = self.c.post('/api/research/start', json={
+            'transaction_type': 'stub loan for testing', 'bank': 'Stub Bank',
+            'residency': 'resident',
+        })
+        self.assertEqual(started.status_code, 202)
+        job_id = json.loads(started.data)['job_id']
+        self.assertTrue(job_id)
+
+        # 3. It polls until done. The contract the flip-board depends on is
+        #    that every intermediate payload carries `stages` and `citations`.
+        import time
+        payload, polls = None, 0
+        deadline = time.time() + 20
+        while time.time() < deadline:
+            polls += 1
+            r = self.c.get('/api/research/status/' + job_id)
+            self.assertEqual(r.status_code, 200)
+            payload = json.loads(r.data)
+            if payload['status'] in ('done', 'error'):
+                break
+            time.sleep(0.2)
+        self.assertIsNotNone(payload)
+        self.assertEqual(payload['status'], 'done',
+                         "job did not complete: %s" % payload)
+        self.assertGreaterEqual(polls, 1)
+        self.assertIn('elapsed', payload)
+        self.assertIn('stages', payload)
+        self.assertIn('citations', payload)
+
+        result = payload['result']
+        self.assertEqual(result['cache'], 'miss')
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(len(result['sources']), 2)
+        self.assertEqual(result['request']['bank'], 'Stub Bank')
+
+        # 4. The browser re-requests the page, which must now hit the cache
+        page2 = self.c.get('/checklist?transaction_type=stub+loan+for+testing'
+                           '&bank=Stub+Bank&residency=resident&just=1')
+        self.assertEqual(page2.status_code, 200)
+        self.assertIn(b'PAN card', page2.data)
+        self.assertIn(b'Sources read for this answer', page2.data)
+        self.assertNotIn(b'board--working', page2.data)
+
+    def test_job_error_is_typed_and_the_page_still_renders(self):
+        import app.research.agent as am
+        from app.research.search import SearchError
+        self._orig_search, self._orig_synth = am.search, am.synthesize
+
+        def boom(*a, **kw):
+            raise SearchError("stubbed outage")
+
+        am.search = boom
+        am.synthesize = lambda *a, **kw: {"answer": None, "provider": "x",
+                                          "model": "", "raw": ""}
+
+        page = self.c.get('/checklist?transaction_type=another+stub+loan')
+        self.assertIn(b'board--working', page.data)
+
+        job_id = json.loads(self.c.post('/api/research/start', json={
+            'transaction_type': 'another stub loan'}).data)['job_id']
+
+        import time
+        payload, deadline = None, time.time() + 20
+        while time.time() < deadline:
+            payload = json.loads(self.c.get('/api/research/status/' + job_id).data)
+            if payload['status'] in ('done', 'error'):
+                break
+            time.sleep(0.2)
+        self.assertEqual(payload['status'], 'error')
+        self.assertIn('message', payload['error'])
+        self.assertIn('kind', payload['error'])
+        self.assertNotIn('Traceback', payload['error']['message'])
+        self.assertNotIn('SearchError', payload['error']['message'])
+
+    def test_start_rejects_a_blank_transaction_before_spawning_a_thread(self):
+        r = self.c.post('/api/research/start', json={'transaction_type': '   '})
+        self.assertEqual(r.status_code, 400)
+        body = json.loads(r.data)
+        self.assertEqual(body['kind'], 'invalid_request')
+        self.assertFalse(body['retryable'])
