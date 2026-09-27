@@ -32,6 +32,25 @@ def _format_inr(value):
     return result
 
 
+def _is_writable_dir(path):
+    """Can we create a file in this directory?
+
+    Deliberately checks the DIRECTORY, not the target file. An earlier version
+    probed the file itself with `open(candidate, 'a')`, which *created* it — and
+    `db_seed.seed_db` then saw a file already present, concluded it had been
+    seeded, and returned without creating any tables. Every fresh clone would
+    have started with a database containing no `checklist_items` table at all,
+    and the first checklist page would 500. Caught by deleting the database and
+    starting again, which is the only way this kind of bug is ever caught.
+    """
+    if not os.path.isdir(path):
+        try:
+            os.makedirs(path)
+        except OSError:
+            return False
+    return os.access(path, os.W_OK | os.X_OK)
+
+
 def _resolve_database_path(instance_path):
     """Pick a writable location for the SQLite file.
 
@@ -44,6 +63,8 @@ def _resolve_database_path(instance_path):
          dies at import time on the first write.
       4. an in-memory database — last resort, so the process still serves
          requests and reports its own degraded state rather than 500-ing.
+
+    This function must not create the file it returns; see _is_writable_dir.
     """
     global _TMP_DB
 
@@ -52,21 +73,15 @@ def _resolve_database_path(instance_path):
         return override
 
     candidate = os.path.join(instance_path, 'kaagaz.db')
-    try:
-        with open(candidate, 'a'):
-            pass
+    if _is_writable_dir(instance_path):
         return candidate
-    except OSError:
-        pass
 
-    fallback = os.path.join(tempfile.gettempdir(), 'kaagaz.db')
-    try:
-        with open(fallback, 'a'):
-            pass
-        return fallback
-    except OSError:
-        _TMP_DB = ':memory:'
-        return _TMP_DB
+    fallback_dir = tempfile.gettempdir()
+    if _is_writable_dir(fallback_dir):
+        return os.path.join(fallback_dir, 'kaagaz.db')
+
+    _TMP_DB = ':memory:'
+    return _TMP_DB
 
 
 def create_app():

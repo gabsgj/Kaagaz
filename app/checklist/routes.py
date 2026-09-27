@@ -51,6 +51,14 @@ EXAMPLES = [
      'Gold loan · SBI', '8 documents, post-2025 RBI directions'),
     ('mudra loan', '', 'resident', '',
      'Mudra loan', '11 documents, by category'),
+    ('personal loan', '', 'resident', '',
+     'Personal loan', '8 documents, unsecured — no collateral'),
+    ('kisan credit card', 'State Bank of India', 'resident', '',
+     'Kisan Credit Card', '7 documents, agricultural — and a different regulator'),
+    ('vehicle loan', 'HDFC Bank', 'resident', '',
+     'Vehicle loan · HDFC', '7 documents, the easiest secured product'),
+    ('loan against property', 'HDFC Bank', 'resident', '',
+     'Loan against property', '8 documents, lower LTV than a home loan'),
 ]
 
 

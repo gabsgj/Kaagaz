@@ -825,3 +825,23 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-09-27 06:20] TESTS: Added TestDirectSearch (14 tests) covering percent-decoding, both HTML parsers, dedup, anti-bot detection, junk-host exclusion, source-authority ranking, tier stability, unknown-bank handling, HTML stripping, dead-link tolerance, throttle fall-through, and the direct path not touching OpenRouter. Made the whole suite network-free — it had silently become live once NIM started answering, taking the run from 5s to 140s. 162 tests, 1.7s.
 
 [2026-09-27 06:25] GATE RESULTS: 162 Python tests in 1.7s. responsive 21/21. jitter stable. demo links 10/10. Search is currently rate-limited by DuckDuckGo (verified: the block detection reports it correctly rather than as a false "no results"); the pipeline retries with backoff and falls through to the model-native backend, and the seeded cache is unaffected.
+[2026-09-27T06:11:34.491645] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:11:34.492254] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:11:34.492345] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:11:34.493300] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:11:34.493377] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:11:34.493433] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:11:52.971791] AI_CALL provider=openrouter prompt_len=1383 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:11:52.972420] AI_CALL provider=nvidia_nim prompt_len=1383 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:11:52.972501] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:11:52.974204] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=0 error=No OpenRouter API key
+[2026-09-27T06:11:52.974424] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=0 error=No NVIDIA NIM API key
+[2026-09-27T06:11:52.974519] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+
+[2026-09-27 06:35] BUGFIX (serious, self-inflicted): Found that a fresh database seeded NO tables. Root cause: the serverless writability probe in _resolve_database_path did `open(candidate, 'a')`, which creates the file; db_seed.seed_db then saw it existing, assumed "already seeded", and returned without creating anything. A fresh clone would 500 on the first checklist page. It hid for an hour because the dev DB already existed, because init_schema creates research_cache unconditionally so all research tests passed, and because my cold-start test only asserted the research side. Fixed by testing the directory's writability instead of the file's. Added three tests: full schema present on cold start, legacy dataset populated on cold start, and the probe does not create the file.
+
+[2026-09-27 06:40] DATA: Extended the seed set from 10 to 14 with personal loan (Kotak + ICICI, contrasting on income proof — Kotak wants 3 months of slips and statements, ICICI pulls income itself via net banking/account aggregator), Kisan Credit Card (SBI + RBI 2026 Scheme Directions; the one seed where the RBI sets most of the rule, and where linked Aadhaar decides 7% vs MCLR-linked), vehicle loan (HDFC car and two-wheeler), and loan against property (HDFC, 65% LTV vs 90% for a home loan). 32 distinct primary sources.
+
+[2026-09-27 06:42] BUGFIX: The umbrella-row guard caught my own new loan-against-property entry for containing "property documents". Split the title chain into the six real documents (sale deed, chain of title, encumbrance certificate, occupancy certificate, tax and maintenance receipts, approved plan) — 5 items to 13. The test earned its keep immediately.
+
+[2026-09-27 06:45] GATE RESULTS: 165 Python tests in 2.7s. responsive 21/21. jitter stable. demo links 14/14 from cache with search down.

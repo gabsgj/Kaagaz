@@ -860,6 +860,71 @@ class TestDeployment(unittest.TestCase):
             self.assertTrue(app.config['DATABASE_IS_EPHEMERAL'],
                             "a path outside instance/ does not survive a restart")
 
+    def test_cold_start_creates_every_table(self):
+        """A brand-new database must come up fully schema'd.
+
+        The database-path resolution added for serverless probed the target
+        file for writability, which created it. `db_seed` then saw a file that
+        already existed, concluded it had been seeded, and returned without
+        creating a single table — so a fresh clone started with no
+        `checklist_items` table and 500'd on the first checklist page, while
+        every research-side test still passed because `init_schema` runs
+        unconditionally. This asserts the whole schema, not just the part the
+        research path happens to use.
+        """
+        import sqlite3
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._fresh_app(tmp)
+            path = app.config['DATABASE']
+            self.assertTrue(os.path.exists(path),
+                            "the database file should be created by seeding, "
+                            "not by the writability probe")
+            conn = sqlite3.connect(path)
+            tables = {r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            conn.close()
+            self.assertIn('research_cache', tables)
+            self.assertIn('checklist_items', tables)
+
+    def test_cold_start_seed_populates_the_legacy_dataset(self):
+        """The Phase-1 static dataset must still be seeded on a fresh database.
+
+        It backs the inline per-document explainer and the graceful-degradation
+        path, so an empty table there is a silent loss of a working feature.
+        """
+        import sqlite3
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._fresh_app(tmp)
+            conn = sqlite3.connect(app.config['DATABASE'])
+            rows = conn.execute(
+                "SELECT COUNT(*) FROM checklist_items").fetchone()[0]
+            conn.close()
+            self.assertGreater(rows, 20,
+                               "legacy checklist dataset was not seeded")
+
+    def test_writability_probe_does_not_create_the_database(self):
+        """_resolve_database_path must not have the side effect of creating the
+        file it is about to hand out. See the note on _is_writable_dir."""
+        import importlib
+        import app as app_pkg
+        with tempfile.TemporaryDirectory() as tmp:
+            instance = os.path.join(tmp, 'instance')
+            os.makedirs(instance)
+            target = os.path.join(instance, 'kaagaz.db')
+            saved = os.environ.get('DATABASE_PATH')
+            os.environ.pop('DATABASE_PATH', None)
+            try:
+                importlib.reload(app_pkg)
+                path = app_pkg._resolve_database_path(instance)
+                self.assertEqual(path, target)
+                self.assertFalse(os.path.exists(target),
+                                 "probing for writability must not create "
+                                 "the database file")
+            finally:
+                if saved is not None:
+                    os.environ['DATABASE_PATH'] = saved
+                importlib.reload(app_pkg)
+
     def test_cold_start_auto_seeds_the_research_cache(self):
         """A cold serverless instance must not answer every question with a
         15-40 second research call."""

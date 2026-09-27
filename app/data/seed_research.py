@@ -1331,3 +1331,484 @@ SEED_ENTRIES = [
         ),
     },
 ]
+
+
+# ── Source URLs for the extended seed set ───────────────────────────────
+KOTAK_PL = "https://www.kotak.bank.in/en/personal-banking/loans/personal-loan/required-documents.html"
+ICICI_PL = "https://www.icici.bank.in/personal-banking/loans/personal-loan/documentation"
+SBI_KCC = "https://sbi.bank.in/web/agri-rural/agriculture-banking/crop-loan/kisan-credit-card"
+RBI_KCC = "https://www.rbi.org.in/scripts/NotificationUser.aspx?Id=13524&Mode=0"
+HDFC_CAR = "https://www.hdfc.bank.in/car-loan/documentation"
+HDFC_TW = "https://www.hdfc.bank.in/two-wheeler-loan/documentation"
+HDFC_LAP = "https://www.hdfc.bank.in/loan-against-property/documentation"
+HDFC_LAP_RATES = "https://www.hdfc.bank.in/loan-against-property/interest-rates-and-charges"
+
+
+SEED_ENTRIES += [
+    # ══════════════════════════════════════════════════════════════════
+    # 11. Personal loan — the most-asked, most-borrowed retail product
+    # ══════════════════════════════════════════════════════════════════
+    {
+        "transaction_type": "personal loan",
+        "bank": "",
+        "residency": "resident",
+        "state": "",
+        "summary": (
+            "A personal loan is unsecured, so the document list is short and "
+            "almost entirely about proving you can repay. Two banks make the "
+            "point sharply in opposite directions: Kotak asks for three months "
+            "of slips AND statements, while ICICI will pull your income proof "
+            "itself through net banking or an account aggregator and asks for "
+            "nothing physical. The practical difference between them is not the "
+            "policy on paper, it is whether you already bank with them."
+        ),
+        "interest_rate_range": "10.99% - 24.00% p.a. (unsecured, so pricing spans the full credit range)",
+        "processing_fee_note": (
+            "Typically 1% - 3% of the loan amount plus taxes. Because the rate "
+            "looks competitive, always compare the APR rather than the headline "
+            "rate: a 10.50% loan with a 1.5% processing fee is an 11.16% APR."
+        ),
+        "regulatory_note": (
+            "The RBI governs KYC, responsible lending conduct and the disclosure "
+            "of the total cost of borrowing in the Key Fact Statement. The "
+            "document list and the fee are the lender's own policy. No state "
+            "stamp duty arises, because an unsecured loan is not registered."
+        ),
+        "disclosures": [
+            "Rate ranges for unsecured lending are wide because the price is set "
+            "by credit score, and the same borrower can be offered very different "
+            "rates by different lenders.",
+            "The effective cost is the APR, not the headline rate — include "
+            "processing fees, documentation fees and insurance when comparing.",
+        ],
+        "items": [
+            {
+                "document_name": "PAN card",
+                "plain_explanation": "Mandatory for the applicant and every co-applicant. Both ICICI and Kotak treat PAN as non-negotiable for a personal loan.",
+                "where_to_obtain": "Income Tax Department",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "rbi", "depends_on": "",
+                "source_note": "Kotak and ICICI personal loan documentation",
+            },
+            {
+                "document_name": "Identity and address proof (officially valid document)",
+                "plain_explanation": "One OVD serves as both: passport, driving licence, Voter ID, NREGA job card, an NPR letter, or voluntary Aadhaar.",
+                "where_to_obtain": "As applicable — licence and Voter ID from the state, passport from your embassy",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "PAN card",
+                "source_note": "Kotak personal loan required documents",
+            },
+            {
+                "document_name": "Last 3 months' salary slips",
+                "plain_explanation": "If you have no salary slips, Kotak accepts three months of bank statements showing regular salary credits, supported by your ITR.",
+                "where_to_obtain": "Your employer",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "Identity and address proof (officially valid document)",
+                "source_note": "Kotak personal loan, alternative to salary slips",
+            },
+            {
+                "document_name": "Last 3 months' bank statement showing salary credit",
+                "plain_explanation": "The period varies by lender: Kotak asks for three months, ICICI three months for salaried applicants. Some lenders ask six.",
+                "where_to_obtain": "Your bank — net banking or a branch request",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 2,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "Kotak and ICICI personal loan documentation",
+            },
+            {
+                "document_name": "Two to three passport-size photographs",
+                "plain_explanation": "Both lenders require them on the application.",
+                "where_to_obtain": "Any photo studio",
+                "approx_cost_min": 100, "approx_cost_max": 300, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "Kotak personal loan required documents",
+            },
+            {
+                "document_name": "ITR or Form 16 — if you are self-employed",
+                "plain_explanation": "Salaried applicants at ICICI usually skip this entirely because income is verified from banking records. Self-employed applicants submit two years of returns.",
+                "where_to_obtain": "incometax.gov.in",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "PAN card",
+                "source_note": "ICICI personal loan documentation, self-employed",
+            },
+            {
+                "document_name": "Employment proof — employee ID or appointment letter",
+                "plain_explanation": "Not always asked for, but useful when you are changing jobs and have a thin statement history at the new employer.",
+                "where_to_obtain": "Your employer",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "Industry-standard personal loan checklist",
+            },
+            {
+                "document_name": "Key Fact Statement acknowledgement",
+                "plain_explanation": "Mandatory under RBI rules before disbursal. It must itemise the total cost of borrowing, which is where the processing fee stops being invisible.",
+                "where_to_obtain": "From the lender, digitally, before sanction",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "rbi", "depends_on": "Last 3 months' bank statement showing salary credit",
+                "source_note": "RBI Key Fact Statement requirements",
+            },
+        ],
+        "sources": _src(
+            ("Kotak Mahindra Bank — Personal Loan required documents", KOTAK_PL),
+            ("ICICI Bank — Personal Loan documentation", ICICI_PL),
+        ),
+    },
+
+    # ══════════════════════════════════════════════════════════════════
+    # 12. Kisan Credit Card — agricultural, and a different regulator mix
+    # ══════════════════════════════════════════════════════════════════
+    {
+        "transaction_type": "kisan credit card",
+        "bank": "State Bank of India",
+        "residency": "resident",
+        "state": "",
+        "summary": (
+            "A Kisan Credit Card is a cash-credit facility, not a term loan, and "
+            "two things follow from that. First, collateral is waived up to "
+            "Rs 2 lakh (Rs 3 lakh where the bank has a tie-up), so the security "
+            "documents that dominate every other secured product largely "
+            "disappear. Second, interest is 7% up to Rs 3 lakh only if the "
+            "3% prompt-repayment subvention is available, and that requires your "
+            "Aadhaar to be linked to the account. Self-reported timely repayment, "
+            "not credit history, is what earns the subvention."
+        ),
+        "interest_rate_range": "7.00% p.a. up to Rs 3.00 lakh with the 3% interest subvention; above Rs 3.00 lakh and below Rs 50.00 lakh, 3.25% above 1-year MCLR",
+        "processing_fee_note": (
+            "Not published on the product page. Service charges and the card "
+            "annual fee vary by issuing bank and are set out in the Key Fact "
+            "Statement — ask for it before you accept the card."
+        ),
+        "regulatory_note": (
+            "Unusually for this product, the RBI sets a great deal of the rule "
+            "itself: the Kisan Credit Card Scheme Directions specify eligibility, "
+            "the six-year composite facility, the interest ceiling, the minimum "
+            "balance basis on which interest is charged, and the one-time land "
+            "record documentation. Land records and cropping pattern come from "
+            "state revenue authorities, so a state agricultural department is "
+            "involved but no stamp duty arises."
+        ),
+        "disclosures": [
+            "The 7% rate up to Rs 3 lakh depends on the prompt-repayment "
+            "incentive, which requires linked Aadhaar. Without it you are on the "
+            "standard MCLR-linked rate.",
+            "For sharecroppers and oral lessees who cannot certify identity or "
+            "occupation, banks accept an affidavit describing the land tilled and "
+            "crops grown — but only for loans up to Rs 50,000.",
+        ],
+        "items": [
+            {
+                "document_name": "Kisan Credit Card application form",
+                "plain_explanation": "The bank's KCC application, covering the limit sought and the cropping plan.",
+                "where_to_obtain": "Any agri branch, or the bank's agri portal",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "SBI Kisan Credit Card, documents required",
+            },
+            {
+                "document_name": "Two passport-size photographs",
+                "plain_explanation": "Standard KYC photograph requirement.",
+                "where_to_obtain": "Any photo studio",
+                "approx_cost_min": 100, "approx_cost_max": 200, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "SBI Kisan Credit Card, documents required",
+            },
+            {
+                "document_name": "Proof of landholding certified by revenue authorities",
+                "plain_explanation": "The land record, or a tenancy certificate, or an equivalent under the bank's credit policy. This is the one-time documentation the RBI directions require at application.",
+                "where_to_obtain": "State revenue department / taluk office",
+                "approx_cost_min": 100, "approx_cost_max": 1000, "approx_time_days": 7,
+                "regulatory_source": "rbi", "depends_on": "Kisan Credit Card application form",
+                "source_note": "RBI KCC Scheme Directions, one-time documentation",
+            },
+            {
+                "document_name": "Cropping pattern with acreage",
+                "plain_explanation": "What you intend to grow and over how much land. The sanctioned limit is set against this, so an understated pattern limits your card.",
+                "where_to_obtain": "Your own records, submitted with the application",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 2,
+                "regulatory_source": "bank_internal", "depends_on": "Proof of landholding certified by revenue authorities",
+                "source_note": "SBI Kisan Credit Card, documents required",
+            },
+            {
+                "document_name": "Security documents — only if the limit exceeds Rs 2.00 lakh",
+                "plain_explanation": "An equitable or registered mortgage of land valued at 100% of the loan. This is waived up to Rs 2.00 lakh, and up to Rs 3.00 lakh where the bank has a tie-up arrangement.",
+                "where_to_obtain": "Sub-registrar, for a registered mortgage",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 15,
+                "regulatory_source": "registrar", "depends_on": "Cropping pattern with acreage",
+                "source_note": "SBI Kisan Credit Card, collateral terms",
+            },
+            {
+                "document_name": "Aadhaar linked to the account",
+                "plain_explanation": "Not a document you file, but the thing that decides your rate. The 3% prompt-repayment incentive requires Aadhaar details to reach the bank, and it is what takes the rate to 7% up to Rs 3 lakh.",
+                "where_to_obtain": "UIDAI, or through your bank's net banking",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "rbi", "depends_on": "",
+                "source_note": "SBI Kisan Credit Card, interest subvention terms",
+            },
+            {
+                "document_name": "Occupational affidavit — for sharecroppers and oral lessees only",
+                "plain_explanation": "Where certification of identity or occupational status is difficult, an affidavit describing the land tilled and the crops grown is accepted. RBI limits this route to loans up to Rs 50,000.",
+                "where_to_obtain": "You write it; notarise if the bank requires",
+                "approx_cost_min": 100, "approx_cost_max": 1000, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "Proof of landholding certified by revenue authorities",
+                "source_note": "RBI KCC Scheme Directions, sharecroppers and oral lessees",
+            },
+        ],
+        "sources": _src(
+            ("SBI — Kisan Credit Card, documents required and interest", SBI_KCC),
+            ("RBI — Regional Rural Banks Kisan Credit Card Scheme Directions", RBI_KCC),
+        ),
+    },
+
+    # ══════════════════════════════════════════════════════════════════
+    # 13. Vehicle loan — HDFC, car and two-wheeler
+    # ══════════════════════════════════════════════════════════════════
+    {
+        "transaction_type": "vehicle loan",
+        "bank": "HDFC Bank",
+        "residency": "resident",
+        "state": "",
+        "summary": (
+            "A vehicle loan is the easiest secured product to document, because "
+            "the collateral is new and the bank already holds the invoice. Two "
+            "HDFC specifics trip people up: a redacted Aadhaar copy is accepted "
+            "only if submitted voluntarily with a consent letter, and a physical "
+            "copy must be under 30 days old. For a two-wheeler the income proof "
+            "requirement is explicitly 'if applicable' — many borrowers are not "
+            "asked for anything beyond identity, address and the dealer's invoice."
+        ),
+        "interest_rate_range": "8.70% - 14.00% p.a. (new car loans, varies by tenure and model)",
+        "processing_fee_note": (
+            "Not published on the documentation page. HDFC's car-loan route "
+            "typically charges a processing fee plus RTO and hypothecation "
+            "charges, which are statutory and set by the RTO — ask for the itemised "
+            "Key Fact Statement."
+        ),
+        "regulatory_note": (
+            "The RBI governs KYC and the fair practice of not bundling insurance. "
+            "RTO and hypothecation fees are statutory charges collected on your "
+            "behalf and paid to the Regional Transport Office, not bank income — "
+            "they are not set by HDFC and not by the RBI. The loan agreement and "
+            "insurance requirement are the bank's own policy."
+        ),
+        "disclosures": [
+            "Hypothecation and RTO charges are statutory and collected for the "
+            "vehicle registry; they vary by state and are not a bank margin.",
+            "For a two-wheeler, income proof is listed by HDFC as required only "
+            "if applicable, so check before you assemble anything.",
+        ],
+        "items": [
+            {
+                "document_name": "Identity and address proof",
+                "plain_explanation": "Passport, permanent driving licence, Voter ID, NREGA job card, NPR letter — or a voluntarily submitted Aadhaar with a consent letter and the first 8 digits redacted.",
+                "where_to_obtain": "As applicable — licence and Voter ID from the state",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "",
+                "source_note": "HDFC car loan documentation",
+            },
+            {
+                "document_name": "Valid driving licence",
+                "plain_explanation": "Must be permanent and unexpired. A learner's permit or a temporary licence will not do, and this is checked separately from identity proof.",
+                "where_to_obtain": "Any RTO in India",
+                "approx_cost_min": 500, "approx_cost_max": 1500, "approx_time_days": 15,
+                "regulatory_source": "registrar", "depends_on": "",
+                "source_note": "HDFC two-wheeler documentation",
+            },
+            {
+                "document_name": "Address proof, if different from your identity proof",
+                "plain_explanation": "Utility bill under two months old, property or municipal tax receipt, pension payment order containing the address, or an employer accommodation letter.",
+                "where_to_obtain": "Utility provider, or your employer",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "Identity and address proof",
+                "source_note": "HDFC two-wheeler documentation, address proof list",
+            },
+            {
+                "document_name": "Latest salary slip and Form 16",
+                "plain_explanation": "Income proof for a salaried car-loan applicant. HDFC accepts the latest slip and Form 16; the two-wheeler product instead accepts any one of three months' slips, three months' statements showing salary credit, or Form 16.",
+                "where_to_obtain": "Your employer, and incometax.gov.in",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 2,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "HDFC car and two-wheeler documentation",
+            },
+            {
+                "document_name": "Previous 6 months' bank statements",
+                "plain_explanation": "For a car loan. The two-wheeler product asks for three months instead, or the latest ITR if you are self-employed.",
+                "where_to_obtain": "Your bank",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 2,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "HDFC car loan documentation",
+            },
+            {
+                "document_name": "Latest ITR — if self-employed",
+                "plain_explanation": "Self-employed sole proprietors submit their latest return. Partnership and company applicants submit two years of audited balance sheet, profit and loss account, and company ITR.",
+                "where_to_obtain": "incometax.gov.in, or your CA",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 2,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "HDFC car loan documentation, self-employed",
+            },
+            {
+                "document_name": "Invoice or quotation from the dealer",
+                "plain_explanation": "Proof of purchase. For a two-wheeler this is listed explicitly; for a car it underpins the valuation the bank lends against.",
+                "where_to_obtain": "The dealership",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "HDFC two-wheeler documentation, proof of purchase",
+            },
+        ],
+        "sources": _src(
+            ("HDFC Bank — Car Loan documentation", HDFC_CAR),
+            ("HDFC Bank — Two Wheeler Loan documentation", HDFC_TW),
+        ),
+    },
+
+    # ══════════════════════════════════════════════════════════════════
+    # 14. Loan against property — the LTV/tax-benefit contrast with a home loan
+    # ══════════════════════════════════════════════════════════════════
+    {
+        "transaction_type": "loan against property",
+        "bank": "HDFC Bank",
+        "residency": "resident",
+        "state": "",
+        "summary": (
+            "A loan against property borrows against a property you already own, "
+            "which changes three things relative to a home loan. The money is "
+            "disposable, so the money is yours rather than the bank's. The "
+            "loan-to-value is lower — up to 65% of market value against 90% for a "
+            "home loan. And the Section 24(b) interest deduction available on a "
+            "self-occupied home loan does not apply to the same extent, so the "
+            "after-tax cost is genuinely higher even when the headline rate looks "
+            "similar. Decisioning can take up to 25 days where a field "
+            "investigation or valuation is needed."
+        ),
+        "interest_rate_range": "8.30% - 12.75% p.a. (Policy Repo Rate + 3.05% to 7.50%)",
+        "processing_fee_note": (
+            "Applicable taxes and charges are payable at actual, including stamp "
+            "duty on the mortgage deed. Document retrieval after disbursement is "
+            "charged at Rs 75 per document set, and an amortisation schedule is "
+            "Rs 50 per request."
+        ),
+        "regulatory_note": (
+            "RBI governs KYC and responsible lending, including a 2% p.a. charge "
+            "on the principal outstanding where the borrower fails to comply with "
+            "sanction terms, capped at Rs 50,000 for critical documents. But the "
+            "stamp duty on the mortgage deed itself is a state charge levied on "
+            "registering the mortgage, and that is the single largest "
+            "state-versus-central distinction in this product."
+        ),
+        "disclosures": [
+            "Stamp duty and registration on the mortgage deed are state charges "
+            "and vary by state and by the value of the property. They are not an "
+            "HDFC charge and not an RBI charge.",
+            "Decisioning is within 7 days with complete documents, but up to 25 "
+            "days where a field investigation or property valuation is required.",
+        ],
+        "items": [
+            {
+                "document_name": "Identity proof",
+                "plain_explanation": "Voter's ID, employer's card, or any other officially valid document. If your ID carries your address, a separate address proof is not needed.",
+                "where_to_obtain": "As applicable",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Proof of residence",
+                "plain_explanation": "Ration card, telephone bill, electricity bill, or Voter's ID — any one of them.",
+                "where_to_obtain": "Utility provider, or the local ration shop",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "rbi", "depends_on": "",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Last 6 months' salary slips and Form 16 for 2 years",
+                "plain_explanation": "HDFC asks for six months of slips for a salaried applicant here, which is longer than the three months a personal loan needs.",
+                "where_to_obtain": "Your employer, and incometax.gov.in",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "bank_internal", "depends_on": "Identity proof",
+                "source_note": "HDFC loan against property documentation, salaried",
+            },
+            {
+                "document_name": "Certified financial statements for 3 years",
+                "plain_explanation": "Required if you are self-employed, to demonstrate financial stability and business income over time.",
+                "where_to_obtain": "Your chartered accountant",
+                "approx_cost_min": 3000, "approx_cost_max": 15000, "approx_time_days": 7,
+                "regulatory_source": "bank_internal", "depends_on": "",
+                "source_note": "HDFC loan against property documentation, self-employed",
+            },
+            {
+                "document_name": "Sale deed or title deed of the property",
+                "plain_explanation": "The most recent instrument conferring title on you. This is the anchor document; everything else exists to prove the chain back from it.",
+                "where_to_obtain": "Sub-registrar office where the deed was registered",
+                "approx_cost_min": 100, "approx_cost_max": 500, "approx_time_days": 3,
+                "regulatory_source": "registrar", "depends_on": "",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Chain of title — previous deeds",
+                "plain_explanation": "Every earlier deed back to the original grant. An incomplete chain, not your income, is the usual reason a loan against property stalls.",
+                "where_to_obtain": "Sub-registrar offices where each deed was registered",
+                "approx_cost_min": 300, "approx_cost_max": 3000, "approx_time_days": 7,
+                "regulatory_source": "registrar", "depends_on": "Sale deed or title deed of the property",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Encumbrance certificate",
+                "plain_explanation": "Proves the property is free of existing charges. Without it the bank cannot take a clean mortgage, so this is not optional paperwork.",
+                "where_to_obtain": "State registration department, via the state portal",
+                "approx_cost_min": 500, "approx_cost_max": 2500, "approx_time_days": 7,
+                "regulatory_source": "registrar", "depends_on": "Chain of title — previous deeds",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Occupancy or completion certificate",
+                "plain_explanation": "Proves the building is lawfully completed and fit to occupy, which the bank needs before accepting it as security.",
+                "where_to_obtain": "Municipal corporation or the local development authority",
+                "approx_cost_min": 200, "approx_cost_max": 1000, "approx_time_days": 10,
+                "regulatory_source": "registrar", "depends_on": "Sale deed or title deed of the property",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Property tax receipts and maintenance bills",
+                "plain_explanation": "Evidence that taxes and society or maintenance charges are current, which is a standard condition of the mortgage.",
+                "where_to_obtain": "Your municipal corporation, and the society or association",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 3,
+                "regulatory_source": "registrar", "depends_on": "Sale deed or title deed of the property",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Approved building plan",
+                "plain_explanation": "The sanctioned plan for the property, which lets the bank verify the built structure matches what was approved.",
+                "where_to_obtain": "Municipal corporation or the local development authority",
+                "approx_cost_min": 0, "approx_cost_max": 500, "approx_time_days": 7,
+                "regulatory_source": "registrar", "depends_on": "Occupancy or completion certificate",
+                "source_note": "HDFC loan against property documentation",
+            },
+            {
+                "document_name": "Property valuation report",
+                "plain_explanation": "The bank lends against market value, and the valuation is what sets the loan-to-value of up to 65%. It is arranged by the bank, and where it needs a field investigation it is the reason decisioning stretches to 25 days.",
+                "where_to_obtain": "Arranged by HDFC Bank",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 10,
+                "regulatory_source": "bank_internal", "depends_on": "Encumbrance certificate",
+                "source_note": "HDFC loan against property, decisioning timelines",
+            },
+            {
+                "document_name": "Stamp duty and registration on the mortgage deed",
+                "plain_explanation": "A state charge levied on registering the mortgage, payable at actual. It is the item most often mistaken for an HDFC fee, and it is neither an HDFC charge nor an RBI one.",
+                "where_to_obtain": "State sub-registrar, or via the state stamp portal",
+                "approx_cost_min": None, "approx_cost_max": None, "approx_time_days": 7,
+                "regulatory_source": "state_stamp_act", "depends_on": "Sale deed or title deed of the property",
+                "source_note": "HDFC loan against property charges, applicable at actual",
+            },
+            {
+                "document_name": "Loan Against Property agreement and Key Facts Statement",
+                "plain_explanation": "Signed at sanction. A Dropline Overdraft agreement is also signed if you take the overdraft variant, and a Loan Against Rent Receivables agreement if the property is tenanted.",
+                "where_to_obtain": "Provided by the bank at sanction",
+                "approx_cost_min": 0, "approx_cost_max": 0, "approx_time_days": 1,
+                "regulatory_source": "bank_internal", "depends_on": "Property valuation report",
+                "source_note": "HDFC loan against property formalities",
+            },
+        ],
+        "sources": _src(
+            ("HDFC Bank — Loan Against Property, documents required", HDFC_LAP),
+            ("HDFC Bank — Loan Against Property interest rates and charges", HDFC_LAP_RATES),
+        ),
+    },
+]
