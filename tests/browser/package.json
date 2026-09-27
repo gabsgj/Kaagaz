@@ -6,7 +6,8 @@
   "scripts": {
     "responsive": "node responsive_audit.js",
     "jitter": "node jitter_test.js",
-    "all": "node responsive_audit.js && node jitter_test.js"
+    "all": "node responsive_audit.js && node jitter_test.js && node demo_links_test.js",
+    "demo-links": "node demo_links_test.js"
   },
   "dependencies": {
     "puppeteer-core": "^23.0.0"

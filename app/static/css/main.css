@@ -963,6 +963,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
    informative rather than decorative. */
 .board--working .flip__cell { background: rgba(0, 0, 0, 0.18); }
 .board--working .board__label { color: #F0C9A0; }
+/* Failed: the board stops pretending to be a live research log. */
+.board--failed .flip__cell { background: rgba(0, 0, 0, 0.18); }
+.board--failed .board__label { color: #E8A79B; }
+.board--failed .ticker__pulse { background: #E8A79B; animation: none; }
 
 /* The ticker root. It holds BOTH the scrolling stage line and the row of
    source pills revealed by the search step. Only the line clips; the pills

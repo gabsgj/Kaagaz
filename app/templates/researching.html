@@ -47,7 +47,7 @@
     </div>
   </div>
 
-  <div class="notice notice--info" style="margin-bottom:24px">
+  <div class="notice notice--info" id="coldQueryNote" style="margin-bottom:24px">
     {{ ico.icon('info', 20, cls='notice__icon') }}
     <span>
       This is a cold query, so Kaagaz is searching the web and reading what it
@@ -85,6 +85,7 @@ window.addEventListener('DOMContentLoaded', function () {
   var failMsg = document.getElementById('failureMessage');
   var retry   = document.getElementById('retryBtn');
   var label   = document.getElementById('boardLabel');
+  var board   = document.getElementById('board');
   var fill    = document.getElementById('boardFill');
   var elapsed = document.getElementById('elapsed');
   var ticker  = window.KaagazFlip.ticker('#ticker');
@@ -110,6 +111,16 @@ window.addEventListener('DOMContentLoaded', function () {
     failMsg.textContent = message;
     failBox.hidden = false;
     fill.style.width = '0%';
+    // Everything above still claims a research is in progress. On failure that
+    // is a lie the user can see, so the board is relabelled, the pulse is
+    // stopped, and the "we are searching the web" note is withdrawn.
+    label.textContent = 'Research stopped';
+    board.classList.remove('board--working');
+    board.classList.add('board--failed');
+    var pulse = document.querySelector('.ticker__pulse');
+    if (pulse) pulse.style.animationPlayState = 'paused';
+    var note = document.getElementById('coldQueryNote');
+    if (note) note.hidden = true;
     if (ticker) ticker.say('Could not complete this research');
   }
 
@@ -141,6 +152,15 @@ window.addEventListener('DOMContentLoaded', function () {
 
   function run() {
     failBox.hidden = true;
+    // Restore everything showFailure() tore down, so "Try again" is a genuine
+    // reset rather than a second click on a half-broken page.
+    var note = document.getElementById('coldQueryNote');
+    if (note) note.hidden = false;
+    board.classList.add('board--working');
+    board.classList.remove('board--failed');
+    label.textContent = 'Researching live';
+    var pulse = document.querySelector('.ticker__pulse');
+    if (pulse) pulse.style.animationPlayState = '';
     if (ticker) { ticker.clear(); ticker.say('Starting…'); }
     setElapsed(0);
 
@@ -170,6 +190,9 @@ window.addEventListener('DOMContentLoaded', function () {
         setTimeout(loadResult, 500);
       })
       .catch(function (err) {
+        // Report the real time spent before giving up, rather than leaving the
+        // clock frozen at whatever the last successful poll happened to show.
+        setElapsed((Date.now() - started) / 1000);
         showFailure(
           (err && err.message) ||
           'We could not complete this research right now. Please try again.'

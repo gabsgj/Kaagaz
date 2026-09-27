@@ -282,6 +282,10 @@ CATEGORIES = {
     "home loan": "Home loan",
     "home-loan": "Home loan",
     "education loan": "Education loan",
+    # A distinct product from a domestic education loan: a study-abroad loan
+    # adds passport and attestation requirements and a different security
+    # threshold, so it must not collapse into the plain "Education loan".
+    "education loan (study abroad)": "Education loan (study abroad)",
     "study abroad loan": "Education loan (study abroad)",
     "study-abroad": "Education loan (study abroad)",
     "overseas education loan": "Education loan (study abroad)",

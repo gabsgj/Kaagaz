@@ -743,8 +743,88 @@ class TestRoutes(unittest.TestCase):
 
     def test_static_assets_are_served(self):
         for path in ('/static/css/main.css', '/static/js/flipboard.js',
-                     '/static/js/checklist.js'):
+                     '/static/js/checklist.js', '/static/favicon.svg'):
             self.assertEqual(self.c.get(path).status_code, 200, path)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Demo reliability
+#
+# The demo is pre-warmed precisely so the recorded run hits the cache. A seed
+# whose example link misses is a broken demo, and that is exactly what happened
+# once: the education-loan seed was keyed under "education loan (study abroad)"
+# while its example chip asked for "education loan". These tests make that
+# class of mistake impossible to reintroduce silently.
+# ══════════════════════════════════════════════════════════════════════
+def _qs(tx, bank, residency, state):
+    parts = ['transaction_type=' + tx.replace(' ', '+'),
+             'bank=' + bank.replace(' ', '+'),
+             'residency=' + residency]
+    if state:
+        parts.append('state=' + state.replace(' ', '+'))
+    return '/checklist?' + '&'.join(parts)
+
+
+class TestDemoIsPreWarmed(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        from scripts.preseed import seed_all
+        cls.app = create_app()
+        seed_all(cls.app, force=True, verbose=False)
+        cls.c = cls.app.test_client()
+
+    def test_every_example_chip_serves_from_cache(self):
+        from app.checklist.routes import EXAMPLES
+        from app.research import agent
+        from app.research.cache import make_cache_key
+
+        for tx, bank, residency, state, label, _note in EXAMPLES:
+            req = agent.parse_request({
+                'transaction_type': tx, 'bank': bank,
+                'residency': residency, 'state': state,
+            })
+            key = make_cache_key(req['transaction_type'], req['bank'],
+                                 req['residency'], req['state'])
+            with self.subTest(example=label):
+                self.assertIsNotNone(
+                    cache_mod.get_any(self.app, key),
+                    "%r does not resolve to a pre-warmed entry — the demo "
+                    "would hit the research path for a case meant to be "
+                    "instant" % label,
+                )
+
+    def test_every_example_chip_renders_a_checklist_over_http(self):
+        from app.checklist.routes import EXAMPLES
+        for tx, bank, residency, state, label, _note in EXAMPLES:
+            with self.subTest(example=label):
+                r = self.c.get(_qs(tx, bank, residency, state))
+                self.assertEqual(r.status_code, 200, label)
+                self.assertIn(b'Documents ready', r.data, label)
+                self.assertNotIn(b'board--working', r.data,
+                                 "%r fell through to the researching view" % label)
+
+    def test_domestic_and_study_abroad_education_loans_are_distinct(self):
+        """A study-abroad loan is a different product and must not share a key."""
+        domestic = refdata.normalize_category('education loan')
+        abroad = refdata.normalize_category('study abroad loan')
+        self.assertNotEqual(domestic, abroad)
+        self.assertEqual(abroad, 'Education loan (study abroad)')
+        self.assertEqual(refdata.normalize_category('education loan (study abroad)'),
+                         abroad)
+
+    def test_cache_serves_everything_even_with_no_search_provider(self):
+        """The app must be fully demonstrable from cache alone.
+
+        This is the property that makes the demo safe: with no API credit at
+        all, every pre-warmed case still answers instantly and no code path
+        reaches the network.
+        """
+        from app.checklist.routes import EXAMPLES
+        for tx, bank, residency, state, label, _note in EXAMPLES:
+            with self.subTest(example=label):
+                r = self.c.get(_qs(tx, bank, residency, state))
+                self.assertIn(b'Sources read for this answer', r.data, label)
 
 
 # ══════════════════════════════════════════════════════════════════════

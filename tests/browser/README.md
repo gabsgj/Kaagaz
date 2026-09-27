@@ -52,3 +52,16 @@ digits change length. That rots silently, so it is measured:
 - the status badge must not resize between "Pending" / "In progress" / "Done"
   (a 112px min-width is required to hold the longest label)
 - the board must not move while the 3D flip animation runs
+
+### `demo_links_test.js`
+
+Clicks every example chip on the ask page and asserts each one lands on a
+rendered checklist with steps, source links and the research record — i.e. that
+it was served from cache rather than falling through to the researching view.
+This exists because a seed once drifted out of sync with the link that
+advertises it (the education-loan chip asked for `education loan` while the
+seed was keyed `education loan (study abroad)`), which would have put a cold
+research call in the middle of a recorded demo.
+
+The Python suite asserts the same property at the data layer
+(`TestDemoIsPreWarmed`); this one asserts it through the real UI.

@@ -159,8 +159,9 @@
     <span class="meta-sm">Pre-warmed &middot; instant answer</span>
   </div>
   <div class="chips" style="margin-bottom:32px">
-    {% for tx, bank, residency, label, note in examples %}
-      <a class="chip" href="/checklist?transaction_type={{ tx | urlencode }}&amp;bank={{ bank | urlencode }}&amp;residency={{ residency }}"
+    {% for tx, bank, residency, state, label, note in examples %}
+      <a class="chip"
+         href="/checklist?transaction_type={{ tx | urlencode }}&amp;bank={{ bank | urlencode }}&amp;residency={{ residency }}{% if state %}&amp;state={{ state | urlencode }}{% endif %}"
          title="{{ note }}">{{ label }}</a>
     {% endfor %}
   </div>

@@ -24,29 +24,33 @@ TRANSACTION_LABELS = {
 
 # Demo-safe starting points, shown on the picker. These are exactly the cases
 # that are pre-warmed, so clicking one answers instantly. Each carries the
-# residency status it was researched under, because residency changes the
-# answer for most of these.
+# residency status and state it was researched under, because both change the
+# answer for most of these. tests/test_research.py::TestDemoIsPreWarmed
+# asserts that every one of these resolves to a cache hit — a seed whose chip
+# misses is a broken demo, and that is not a mistake to make twice.
 EXAMPLES = [
-    ('home loan', 'HDFC Bank', 'resident', 'Home loan · HDFC Bank',
-     '14 documents, rate band included'),
-    ('home loan', 'State Bank of India', 'nri', 'Home loan · SBI, as an NRI',
+    ('home loan', 'HDFC Bank', 'resident', '',
+     'Home loan · HDFC Bank', '14 documents, rate band included'),
+    ('home loan', 'State Bank of India', 'nri', '',
+     'Home loan · SBI, as an NRI',
      '10 documents, includes work permit and attestation'),
-    ('education loan', 'State Bank of India', 'all_nri',
+    ('study abroad loan', 'State Bank of India', 'all_nri', '',
      'Education loan · study abroad', '13 documents, all-NRI household'),
-    ('loan against fixed deposit', 'State Bank of India', 'resident',
+    ('loan against fixed deposit', 'State Bank of India', 'resident', '',
      'Loan against FD · SBI', '6 documents, spread pricing'),
-    ('fd as guarantee', 'State Bank of India', 'resident',
+    ('fd as guarantee', 'State Bank of India', 'resident', '',
      'FD as a guarantee',
      'The contrast case — and why it is not the same thing'),
-    ('nri account', 'State Bank of India', 'nri', 'NRI account · NRE / NRO',
-     '9 documents, FEMA and attestation'),
-    ('property registration', '', 'not_applicable',
+    ('nri account', 'State Bank of India', 'nri', '',
+     'NRI account · NRE / NRO', '9 documents, FEMA and attestation'),
+    ('property registration', '', 'not_applicable', 'Kerala',
      'Property registration · Kerala', '13 documents, stamp act vs registrar'),
-    ('business current account', 'ICICI Bank', 'not_applicable',
+    ('business current account', 'ICICI Bank', 'not_applicable', '',
      'Business current account · ICICI', '12 documents, company structure'),
-    ('gold loan', 'State Bank of India', 'resident', 'Gold loan · SBI',
-     '8 documents, post-2025 RBI directions'),
-    ('mudra loan', '', 'resident', 'Mudra loan', '11 documents, by category'),
+    ('gold loan', 'State Bank of India', 'resident', '',
+     'Gold loan · SBI', '8 documents, post-2025 RBI directions'),
+    ('mudra loan', '', 'resident', '',
+     'Mudra loan', '11 documents, by category'),
 ]
 
 
