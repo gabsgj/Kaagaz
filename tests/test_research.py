@@ -950,24 +950,36 @@ class TestDeployment(unittest.TestCase):
         c = create_app().test_client()
         health = json.loads(c.get('/api/research/health').data)
         for field in ('ok', 'database_path', 'database_ephemeral',
-                      'serverless', 'has_openrouter_key', 'cache'):
+                      'serverless', 'providers', 'has_any_ai_key', 'cache'):
             self.assertIn(field, health)
         self.assertIn('entries', health['cache'])
         self.assertIsInstance(health['ok'], bool)
 
+    def test_health_lists_every_registered_provider(self):
+        """A provider that is configured but out of credit is the most common
+        deployment fault, and the health endpoint must be able to say so."""
+        from app.ai.client import PROVIDERS
+        health = json.loads(create_app().test_client()
+                            .get('/api/research/health').data)
+        self.assertEqual([p['name'] for p in health['providers']],
+                         [p.name for p in PROVIDERS])
+        self.assertIn('groq', [p['name'] for p in health['providers']])
+        for entry in health['providers']:
+            self.assertIn('has_key', entry)
+            self.assertIn('tripped', entry)
+
     def test_health_never_500s_without_any_keys(self):
         """A health check that fails on a missing optional key is useless."""
-        import app as app_pkg
-        saved = {k: os.environ.pop(k, None)
-                 for k in ('OPENROUTER_API_KEY', 'NVIDIA_NIM_API_KEY')}
+        from app.ai.client import PROVIDERS
+        saved = {p.key_env: os.environ.pop(p.key_env, None) for p in PROVIDERS}
         try:
-            application = create_app()
-            c = application.test_client()
+            c = create_app().test_client()
             r = c.get('/api/research/health')
             self.assertEqual(r.status_code, 200)
             health = json.loads(r.data)
-            self.assertFalse(health['has_openrouter_key'])
             self.assertTrue(health['ok'])
+            self.assertFalse(health['has_any_ai_key'])
+            self.assertFalse(any(p['has_key'] for p in health['providers']))
         finally:
             for k, v in saved.items():
                 if v is not None:
@@ -1431,3 +1443,296 @@ class TestDirectSearch(unittest.TestCase):
                          sorted(DIRECT_SEARCH_RETRIES), "must grow")
         self.assertLess(sum(DIRECT_SEARCH_RETRIES), 60,
                         "total backoff must not exceed a cold-research wait")
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Provider registry
+#
+# Three behaviours here are load-bearing and all were found the hard way:
+# skipping providers with no key, tripping out providers that are out of
+# credit, and discovering Groq's model list instead of hardcoding it.
+# ══════════════════════════════════════════════════════════════════════
+def _http_error(status):
+    """A requests.HTTPError that actually carries its status code.
+
+    The circuit breaker reads `exc.response.status_code`, exactly as it does
+    with a live response, so a test double has to set the same attribute or it
+    is not testing the same contract.
+    """
+    import requests
+    response = requests.Response()
+    response.status_code = status
+    err = requests.HTTPError("%d error" % status, response=response)
+    return err
+
+
+class TestProviderRegistry(unittest.TestCase):
+
+    def setUp(self):
+        from app.ai import client
+        self.client = client
+        self.saved_env = {p.key_env: os.environ.get(p.key_env)
+                          for p in client.PROVIDERS}
+        self.saved_trip = dict(client._tripped)
+        client._tripped.clear()
+        self.addCleanup(self._restore)
+
+    def _restore(self):
+        c = self.client
+        c._tripped.clear()
+        c._tripped.update(self.saved_trip)
+        for env, value in self.saved_env.items():
+            if value is None:
+                os.environ.pop(env, None)
+            else:
+                os.environ[env] = value
+        c._reset_groq_cache()
+
+    def _clear_keys(self):
+        for p in self.client.PROVIDERS:
+            os.environ.pop(p.key_env, None)
+
+    # ── registry shape ────────────────────────────────────────────────
+    def test_groq_is_registered_between_openrouter_and_nim(self):
+        names = [p.name for p in self.client.PROVIDERS]
+        self.assertEqual(names, ['openrouter', 'groq', 'nvidia_nim'])
+        self.assertEqual(self.client.GROQ.key_env, 'GROQ_API_KEY')
+
+    def test_groq_uses_the_openai_compatible_endpoint(self):
+        self.assertIn('api.groq.com/openai/v1/chat/completions',
+                      self.client.GROQ.url)
+
+    def test_every_provider_declares_at_least_one_model(self):
+        for p in self.client.PROVIDERS:
+            self.assertTrue(p.models, p.name)
+
+    # ── skipping and tripping ─────────────────────────────────────────
+    def test_provider_with_no_key_is_skipped_without_being_called(self):
+        """An unauthenticated call is a wasted round trip on every request."""
+        self._clear_keys()
+        calls = []
+
+        def explode(*a, **kw):
+            calls.append(1)
+            raise AssertionError("must not call a provider with no key")
+
+        original = self.client.call_provider
+        self.client.call_provider = explode
+        try:
+            with self.assertRaises(Exception):
+                self.client.call_chain("s", "u", 100)
+        finally:
+            self.client.call_provider = original
+        self.assertEqual(calls, [])
+
+    def test_no_keys_at_all_raises_rather_than_inventing_an_answer(self):
+        self._clear_keys()
+        with self.assertRaises(ValueError):
+            self.client.call_chain("sys", "user", 100)
+
+    def test_out_of_credit_provider_is_tripped_and_skipped_afterwards(self):
+        """The OpenRouter key here is a free tier with no credit. Without a
+        breaker, every generation opens with a guaranteed ~200ms 402."""
+        os.environ[self.client.OPENROUTER.key_env] = "dead-key"
+        os.environ[self.client.GROQ.key_env] = "good-key"
+        calls = []
+
+        def fake_post(provider, model, *a, **kw):
+            calls.append(provider.name)
+            if provider.name == "openrouter":
+                raise _http_error(402)
+            return "{}", "fake-model"
+
+        original = self.client._post
+        self.client._post = fake_post
+        try:
+            text, provider_name, _ = self.client.call_chain("sys", "user", 100)
+            self.assertEqual(provider_name, "groq")
+            self.assertEqual(calls, ["openrouter", "groq"], "no repeated 402s")
+
+            # Second call must go straight to Groq.
+            calls.clear()
+            self.client.call_chain("sys", "user", 100)
+        finally:
+            self.client._post = original
+
+        self.assertEqual(calls, ["groq"],
+                         "tripped provider should not be retried this process")
+
+    def test_a_model_404_does_not_retry_other_slugs_on_the_same_provider(self):
+        """A retired slug on one provider says nothing about its other models
+        once the provider itself has said it cannot serve."""
+        os.environ[self.client.GROQ.key_env] = "k"
+        seen = []
+
+        def fake_post(provider, model, *a, **kw):
+            seen.append(model)
+            raise _http_error(404)
+
+        original = self.client._post
+        self.client._post = fake_post
+        try:
+            with self.assertRaises(Exception):
+                self.client.call_provider(self.client.GROQ, "s", "u", 10)
+        finally:
+            self.client._post = original
+        self.assertEqual(len(seen), 1, "must not walk the whole model list")
+        self.assertTrue(self.client._is_tripped(self.client.GROQ))
+
+    def test_trip_expires_so_a_topped_up_key_recovers(self):
+        p = self.client.GROQ
+        self.client._trip(p, "HTTP 402")
+        self.assertTrue(self.client._is_tripped(p))
+        self.client._tripped[p.name] = ("HTTP 402", 0.0)  # ancient
+        self.assertFalse(self.client._is_tripped(p),
+                         "a tripped provider must be retried after the grace "
+                         "period, since a key can be topped up mid-session")
+
+    def test_a_working_provider_is_not_left_tripped(self):
+        p = self.client.GROQ
+        os.environ[p.key_env] = "k"
+        self.client._trip(p, "HTTP 402")
+        self.client._reset_trip(p)
+        self.assertFalse(self.client._is_tripped(p))
+
+    def test_transient_status_is_not_tripped(self):
+        """A 500 or a bad request is a fault of that one call, not a reason to
+        abandon a provider for five minutes. Only auth/quota/gone are terminal."""
+        os.environ[self.client.GROQ.key_env] = "k"
+        for status in (500, 400, 422, 503):
+            with self.subTest(status=status):
+                self.client._tripped.clear()
+
+                def fake_post(provider, model, *a, **kw):
+                    raise _http_error(status)
+
+                original = self.client._post
+                self.client._post = fake_post
+                try:
+                    with self.assertRaises(Exception):
+                        self.client.call_provider(self.client.GROQ, "s", "u", 10)
+                finally:
+                    self.client._post = original
+                self.assertFalse(self.client._is_tripped(self.client.GROQ),
+                                 "%d should not trip the provider" % status)
+
+    def test_terminal_statuses_are_the_ones_we_trip_on(self):
+        self.assertEqual(set(self.client._DEAD_STATUSES),
+                         {401, 402, 403, 404, 410, 429})
+
+    def test_health_lists_providers_with_key_and_trip_state(self):
+        os.environ[self.client.GROQ.key_env] = "k"
+        self._clear_keys()
+        os.environ[self.client.GROQ.key_env] = "k"
+        health = {p['name']: p for p in self.client.provider_health()}
+        self.assertTrue(health['groq']['has_key'])
+        self.assertFalse(health['openrouter']['has_key'])
+        self.assertIn('tripped', health['groq'])
+
+    # ── Groq model discovery ──────────────────────────────────────────
+    def test_groq_models_are_discovered_not_hardcoded(self):
+        """The account in use does not serve llama-3.3-70b-versatile at all —
+        a hardcoded list would 404. Verified against /models."""
+        class FakeModels:
+            @staticmethod
+            def get(url, headers=None, timeout=None):
+                self.assertIn("api.groq.com", url)
+                self.assertIn("Authorization", headers)
+
+                class R:
+                    status_code = 200
+
+                    @staticmethod
+                    def json():
+                        return {"data": [{"id": "openai/gpt-oss-120b"},
+                                         {"id": "qwen/qwen3.8-27b"},
+                                         {"id": "whisper-large-v3"},
+                                         {"id": "openai/gpt-oss-safeguard-20b"},
+                                         {"id": "meta-llama/llama-prompt-guard-2-22m"},
+                                         {"id": "canopylabs/orpheus-arabic-saudi"}]}
+                return R()
+
+        import requests
+        self.assertIn(self.client.GROQ.key_env, self.saved_env)
+        os.environ[self.client.GROQ.key_env] = "k"
+        original = requests.get
+        requests.get = FakeModels.get
+        try:
+            self.client._reset_groq_cache()
+            models = self.client._fetch_groq_models()
+        finally:
+            requests.get = original
+            self.client._reset_groq_cache()
+
+        self.assertEqual(models[0], "openai/gpt-oss-120b")
+        self.assertIn("qwen/qwen3.8-27b", models)
+        for junk in ("whisper-large-v3", "safeguard", "prompt-guard", "orpheus"):
+            self.assertNotIn(junk, str(models))
+
+    def test_groq_fallbacks_survive_when_preferred_models_are_absent(self):
+        """`ordered or rest` silently dropped the fallback list; this asserts
+        preferred and discovered models are concatenated."""
+        class FakeModels:
+            @staticmethod
+            def get(url, headers=None, timeout=None):
+                class R:
+                    status_code = 200
+
+                    @staticmethod
+                    def json():
+                        return {"data": [{"id": "qwen/qwen3.8-27b"},
+                                         {"id": "openai/gpt-oss-120b"},
+                                         {"id": "openai/gpt-oss-20b"}]}
+                return R()
+
+        import requests
+        os.environ[self.client.GROQ.key_env] = "k"
+        original = requests.get
+        requests.get = FakeModels.get
+        try:
+            self.client._reset_groq_cache()
+            models = self.client._fetch_groq_models()
+        finally:
+            requests.get = original
+            self.client._reset_groq_cache()
+
+        self.assertEqual(len(models), 3,
+                         "every usable model must survive, not just the "
+                         "preferred slice: %s" % models)
+        self.assertEqual(models[0], "openai/gpt-oss-120b")
+
+    def test_groq_falls_back_to_the_static_shortlist_when_discovery_fails(self):
+        import requests
+        os.environ[self.client.GROQ.key_env] = "k"
+
+        def boom(*a, **kw):
+            raise requests.ConnectionError("network down")
+
+        original = requests.get
+        requests.get = boom
+        try:
+            self.client._reset_groq_cache()
+            models = self.client._fetch_groq_models()
+        finally:
+            requests.get = original
+            self.client._reset_groq_cache()
+        self.assertTrue(models, "must never leave Groq with no models")
+
+    def test_groq_without_a_key_uses_the_static_shortlist(self):
+        self._clear_keys()
+        self.client._reset_groq_cache()
+        self.assertEqual(self.client._fetch_groq_models(),
+                         list(self.client.GROQ.models))
+
+    # ── JSON handling across providers ─────────────────────────────────
+    def test_json_mode_is_omitted_for_providers_that_ignore_it(self):
+        sent = {}
+
+        def fake_post(provider, model, *a, **kw):
+            sent['json_mode'] = kw.get('json_mode')
+            sent['supports'] = provider.supports_json
+            return "{}", "m"
+
+        nim = self.client.NIM
+        self.assertTrue(nim.supports_json,
+                        "NIM honours response_format on the verified models")

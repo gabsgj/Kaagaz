@@ -16,6 +16,7 @@ import time
 from flask import Blueprint, current_app, jsonify, request
 
 from . import agent, cache as cache_mod, jobs, refdata
+from ..ai.client import provider_health
 from .search import SearchError
 
 research_bp = Blueprint("research_bp", __name__)
@@ -131,14 +132,14 @@ def health():
         'database_path': cfg.get('DATABASE'),
         'database_ephemeral': bool(cfg.get('DATABASE_IS_EPHEMERAL')),
         'serverless': bool(cfg.get('SERVERLESS')),
-        'has_openrouter_key': bool(os.environ.get('OPENROUTER_API_KEY')),
-        'has_nim_key': bool(os.environ.get('NVIDIA_NIM_API_KEY')),
+        'providers': provider_health(),
     }
     try:
         report['cache'] = cache_mod.stats(app)
     except Exception as exc:  # noqa: BLE001
         report['ok'] = False
         report['cache_error'] = str(exc)
+    report['has_any_ai_key'] = any(p['has_key'] for p in report['providers'])
     return jsonify(report)
 
 

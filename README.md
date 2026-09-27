@@ -72,10 +72,11 @@ graph TD
     C -->|MISS or STALE| S[research/search.py<br/>web search, web access]
     S --> CIT[Capture cited URLs<br/>from provider annotations]
     CIT --> G[ai/client.py<br/>structured generation]
-    G --> P1[OpenRouter<br/>gpt-4o-mini]
-    P1 -->|fails| P2[OpenRouter<br/>llama-3.1-8b]
-    P2 -->|fails| P3[NVIDIA NIM]
-    P3 --> NRM[research/synthesize.py<br/>validate + enforce rules]
+    G --> P1[ai/client.py<br/>provider chain]
+    P1 -->|tries in order| P1a[OpenRouter<br/>gpt-4o-mini]
+    P1a -->|fails| P1b[Groq<br/>gpt-oss-120b]
+    P1b -->|fails| P1c[NVIDIA NIM<br/>nemotron-3-super]
+    P1c --> NRM[research/synthesize.py<br/>validate + enforce rules]
     NRM --> ST[(SQLite research_cache<br/>answer + source_urls +<br/>researched_at + research_query)]
     ST --> D
 
@@ -164,7 +165,42 @@ and a challenge page** rather than an error. That is detected explicitly, and a
 throttled query is retried with backoff before giving up and falling through to
 the second backend. A throttle is never reported as "no results".
 
-### 3.4 Why search and generation are separate steps
+### 3.4 The generation chain
+
+`app/ai/client.py` holds an ordered registry of chat-completion providers.
+`generate()` and `generate_json()` walk it and take the first usable answer.
+Adding a provider is adding one entry.
+
+| Order | Provider | Key | Why there |
+|---|---|---|---|
+| 1 | OpenRouter | `OPENROUTER_API_KEY` | Best quality for the structured research prompt (`gpt-4o-mini`). Needs a funded key. |
+| 2 | **Groq** | `GROQ_API_KEY` | Very fast, useful free tier. Measured 0.9s with valid JSON. |
+| 3 | NVIDIA NIM | `NVIDIA_NIM_API_KEY` | Works free, slowest of the three. Solid last resort. |
+
+Three behaviours this registry exists to guarantee:
+
+- **A provider with no key is skipped, not called and failed.** An
+  unauthenticated round trip on every request is pure waste.
+- **A provider that is out of credit or rate-limited is tripped out of the
+  rotation** for five minutes. The OpenRouter key here is a free tier with no
+  credit, so without this every generation opened with a guaranteed 402. The
+  chain now goes straight to whichever provider can actually answer. Only
+  terminal statuses trip it — `401/402/403/404/410/429`. A `500` is one bad
+  call, not grounds for abandoning a provider. After the grace period a
+  provider is retried, because a key can be topped up mid-session and nothing
+  signals that except trying again.
+- **Groq's model list is discovered, not hardcoded.** This is not theoretical:
+  `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` — the two slugs a
+  hardcoded list would have named — **do not exist** on this account. The list
+  is fetched from `/models`, filtered to instruction-following families, and
+  ordered by preference. Moderation models (`*-guard-*`, `*-safeguard-*`) and
+  speech models are excluded, since one of those answering a JSON request looks
+  like a successful call and returns nonsense.
+
+`GET /api/research/health` reports each provider's key presence and trip state,
+so "why is it slow" is a question with an answer.
+
+### 3.5 Why search and generation are separate steps
 
 A model with web access is only available on one provider. Coupling search to
 generation would mean a search-tier outage also killed generation. Splitting
@@ -181,7 +217,7 @@ stale answer, clearly labelled with its date. Search failure with nothing
 cached returns a specific, retryable message. Generation failure still returns
 the researched text with its sources attached.
 
-### 3.5 Repository layout
+### 3.6 Repository layout
 
 ```
 kaagaz/
@@ -350,7 +386,7 @@ distinction the product is best placed to make clear.
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env       # then add OPENROUTER_API_KEY
+cp .env.example .env       # then add at least one provider key
 python -m scripts.preseed  # pre-warm the cache (~1s, no network needed)
 flask --app wsgi run
 ```
@@ -406,7 +442,7 @@ external database path.
 ## 9. Testing
 
 ```sh
-pytest tests/ -q          # 162 tests, ~2s
+pytest tests/ -q          # 183 tests, ~3s
 ```
 
 They run with **no network access and no API keys**, deliberately: they assert

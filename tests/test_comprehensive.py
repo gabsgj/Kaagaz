@@ -440,17 +440,22 @@ class TestAILayer:
         from app.ai.client import generate
         from app.data.access import search_dataset
 
-        orig_or  = os.environ.pop('OPENROUTER_API_KEY', None)
-        orig_nim = os.environ.pop('NVIDIA_NIM_API_KEY', None)
+        from app.ai.client import PROVIDERS, _tripped
+        saved = {p.key_env: os.environ.pop(p.key_env, None) for p in PROVIDERS}
+        was_tripped = dict(_tripped)
         try:
+            _tripped.clear()
             with app.app_context():
                 ctx = search_dataset('Encumbrance Certificate', 'home_loan')
                 result = generate('Encumbrance Certificate', ctx, max_tokens=200)
             assert result['source'] == 'static_fallback'
             assert len(result['explanation']) > 10
         finally:
-            if orig_or:  os.environ['OPENROUTER_API_KEY']  = orig_or
-            if orig_nim: os.environ['NVIDIA_NIM_API_KEY'] = orig_nim
+            _tripped.clear()
+            _tripped.update(was_tripped)
+            for env, value in saved.items():
+                if value:
+                    os.environ[env] = value
 
     def test_generation_chain_always_returns_usable_prose(self, app):
         """Whatever happens upstream, the caller must get something renderable.
@@ -463,8 +468,10 @@ class TestAILayer:
         """
         import app.ai.client as client
         from app.data.access import search_dataset
-        saved = {k: os.environ.pop(k, None)
-                 for k in ('OPENROUTER_API_KEY', 'NVIDIA_NIM_API_KEY')}
+        saved = {p.key_env: os.environ.pop(p.key_env, None)
+                 for p in client.PROVIDERS}
+        was_tripped = dict(client._tripped)
+        client._tripped.clear()
         try:
             with app.app_context():
                 ctx = search_dataset('FEMA Declaration', 'nri_account')
@@ -473,6 +480,8 @@ class TestAILayer:
             assert len(result['explanation']) > 20
             assert 'Traceback' not in result['explanation']
         finally:
+            client._tripped.clear()
+            client._tripped.update(was_tripped)
             for k, v in saved.items():
                 if v is not None:
                     os.environ[k] = v

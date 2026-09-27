@@ -851,3 +851,28 @@ PHASE 2 — VISUAL REDESIGN & DATA DEPTH EXPANSION
 [2026-09-27T06:15:16.147063] AI_CALL provider=openrouter prompt_len=884 success=False latency_ms=0 error=No OpenRouter API key
 [2026-09-27T06:15:16.147313] AI_CALL provider=nvidia_nim prompt_len=884 success=False latency_ms=0 error=No NVIDIA NIM API key
 [2026-09-27T06:15:16.147421] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:22:11.597801] AI_CALL provider=openrouter prompt_len=170 success=False latency_ms=444 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T06:22:13.062792] AI_CALL provider=groq prompt_len=170 success=True latency_ms=1464
+[2026-09-27T06:22:35.544141] AI_CALL provider=groq prompt_len=1383 success=True latency_ms=1335
+[2026-09-27T06:22:36.386743] AI_CALL provider=groq prompt_len=884 success=True latency_ms=797
+[2026-09-27T06:22:49.428748] AI_CALL provider=groq prompt_len=1383 success=True latency_ms=1247
+[2026-09-27T06:23:12.300935] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:23:12.303038] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:24:47.117651] AI_CALL provider=static_fallback prompt_len=1383 success=True latency_ms=0
+[2026-09-27T06:24:47.120828] AI_CALL provider=static_fallback prompt_len=884 success=True latency_ms=0
+[2026-09-27T06:24:50.559699] AI_CALL provider=openrouter prompt_len=197 success=False latency_ms=442 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T06:24:52.365391] AI_CALL provider=groq prompt_len=197 success=True latency_ms=1805
+[2026-09-27T06:25:05.318929] AI_CALL provider=openrouter prompt_len=4816 success=False latency_ms=165 error=402 Client Error: Payment Required for url: https://openrouter.ai/api/v1/chat/co
+[2026-09-27T06:25:08.730131] AI_CALL provider=groq prompt_len=4816 success=True latency_ms=3410
+
+[2026-09-27 06:50] AI: User added a GROQ_API_KEY. Verified live: endpoint reachable, 11 models on the account. CRITICAL FINDING — `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` (the slugs a hardcoded list would name) do not exist there and 404. Usable: `openai/gpt-oss-120b` (0.9s, valid JSON), `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`. This confirmed the decision to discover the model list from /models at runtime.
+
+[2026-09-27 06:55] AI: Refactored app/ai/client.py into an ordered PROVIDERS registry (OpenRouter -> Groq -> NVIDIA NIM) with a per-provider model list, a Groq model-discovery step, and a circuit breaker. Providers with no key are now skipped without being called; providers answering 401/402/403/404/410/429 are tripped out for 5 minutes and retried after. Removed the duplicated per-provider logic in generate() and generate_json().
+
+[2026-09-27 07:00] VERIFY: Live structured generation through the real chain returns Groq/openai/gpt-oss-120b in 2.2s with valid parsed JSON. Health shows openrouter tripped and calls going straight to Groq. Full synthesis over real page text (HDFC car loan + Axis loan-against-FD) completes in 3.6s via Groq: 5 fine-grained items, correct RBI vs bank_internal attribution, and — the point of the exercise — it explicitly declined to state an interest rate that the source text did not contain, listing it under "what we could not confirm" instead.
+
+[2026-09-27 07:05] BUGFIX: Three real defects found by the new tests. (1) `call_chain` raised UnboundLocalError when every provider was skipped (no keys) — reachable on a fresh install with no keys configured. (2) The trip decision lived inside the HTTP transport, so any test stubbing _post bypassed the behaviour it was testing; moved into call_provider, next to the retry policy. (3) `ordered or rest` in the Groq discovery silently discarded every fallback model whenever the preferred slice was non-empty. Also: `openai/gpt-oss-safeguard-20b` would have passed a naive filter and been asked for a JSON checklist, returning a safety verdict that parses as a successful call.
+
+[2026-07-27 07:10] TESTS: +18 for the provider registry — registry shape, no-key skipping, no-key-at-all raising rather than inventing an answer, tripping on terminal status and NOT tripping on 500/400/422/503, trip expiry, no walking the model list on a 404, Groq discovery including the safeguard/guard/whisper exclusions, the preferred+fallback concatenation, discovery failure falling back to the static shortlist, and health listing every provider. 183 tests, 3.2s.
+
+[2026-09-27 07:15] GATE RESULTS: 183 Python tests. responsive 21/21. jitter stable. demo links 14/14. Health endpoint now reports three providers with key presence and trip state.
