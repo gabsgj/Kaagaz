@@ -4,7 +4,7 @@
 
 Built with IBM Bob 2.0 for the lablab.ai hackathon, 25–27 September 2026.
 
-Live demo: <https://kaagaz.gabrieljames.me/>
+Live demo: <https://kaagaz.gabrieljames.dev/>
 
 ---
 
